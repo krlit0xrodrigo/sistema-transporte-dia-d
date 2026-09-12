@@ -35,7 +35,8 @@ es un problema para las personas que figuran en la base.
 | S6 | Credenciales de Traccar o Google en el repositorio | Alto | Media | Sólo en variables de entorno; `.env.example` sin valores; escaneo de secretos |
 | S7 | Google Sheet compartido "con cualquiera que tenga el enlace" | Crítico | **Alta** — es el patrón actual | Service Account con acceso a hojas específicas; prohibición documentada de compartir por enlace |
 | S8 | PII en logs de Vercel/Supabase | Medio | Alta | Logger que sólo acepta IDs; revisión de mensajes de error |
-| S9 | Cuentas compartidas entre operadores de campo | Alto | **Alta** en este contexto | Una cuenta por persona, MFA, detección de sesiones concurrentes |
+| S9 | Cuentas compartidas entre operadores de campo | Alto | **Alta** en este contexto | Una cuenta por persona, MFA, detección de sesiones concurrentes. Refuerza RN-16: si el alta la hace una cuenta compartida, se pierde el responsable |
+| S24 | **21 días de desarrollo hasta el operativo** (D-20) | Alto | **Confirmada** | Alcance recortado a un MVP (ver `ROADMAP.md` §2), simulacro el 30/09, congelamiento el 03/10 y paquete de planillas en papel el 02/10 como plan B |
 | S10 | Sin MFA en cuentas con acceso a caja | Alto | Media | MFA obligatorio para `super_admin`, `admin`, `tesoreria` |
 | S11 | Ataque de fuerza bruta / enumeración de CI en el buscador | Medio | Media | Rate limiting en Cloudflare y a nivel de RPC; registro en `accesos_sensibles` |
 | S12 | Backup sin cifrar o restaurado en entorno de prueba con datos reales | Alto | Media | Backups cifrados; prohibido restaurar producción en staging sin anonimizar |
@@ -187,7 +188,15 @@ está aplicada; esto es la recomendación técnica que la acompaña.
    autoridad según lo que determine la revisión legal.
 5. **Cierre** — informe con causa raíz, corrección y control nuevo que impida la repetición.
 
-Responsable de seguridad designado: **pendiente (D-14).**
+### Responsabilidades (D-14)
+
+**Por cada chofer:** el supervisor o concejal que lo declaró responde por él. Queda registrado
+en `choferes.responsable_persona_id` y es obligatorio (RN-16). El reporte "choferes por
+responsable" es el primer lugar donde mirar cuando algo sale mal.
+
+**Por el sistema:** rotar claves, revisar accesos, actuar ante un incidente y ejecutar las
+revisiones periódicas de esta sección quedan en el **responsable del proyecto**, salvo que se
+designe a otra persona. Es un rol distinto y conviene que tenga nombre antes del 3 de octubre.
 
 ## 8. Estrategia de testing (seguridad incluida)
 

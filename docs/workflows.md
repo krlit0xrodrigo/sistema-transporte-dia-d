@@ -42,6 +42,7 @@ alta de alguien en lista negra.
                            ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │ 6. Datos: candidato · barrio · supervisor · estado · vehículo        │
+│    + RESPONSABLE que declara al chofer (obligatorio — RN-16)         │
 │    Todos desde catálogo. Nada de texto libre.                        │
 │    Local, mesa y orden vienen del padrón, no se cargan.              │
 └──────────────────────────┬───────────────────────────────────────────┘
@@ -75,7 +76,8 @@ borrador ──▶ activo ──┬──▶ suspendido ──▶ activo
 | CI ya es chofer activo en la elección | **Bloqueo duro.** Se muestra la ficha, quién lo cargó y la aparición previa |
 | CI en lista negra `bloqueo_total` vigente | **Bloqueo**, sólo excepción aprobada lo habilita |
 | CI en lista negra `advertencia` | Alta permitida con confirmación explícita registrada |
-| CI no encontrado en el padrón de Villa Hayes | Alta permitida, marcada `fuera_de_padron` (70 casos actuales — D-21) |
+| CI no encontrado en el padrón de Villa Hayes | **Alta aceptada**, marcada `fuera_de_padron` (70 casos actuales — D-21). No bloquea ni impide cobrar |
+| Sin responsable declarado | **Rechazo** (RN-16): todo chofer responde a un supervisor o concejal |
 | CI en el padrón pero con otro nombre | Conflicto: requiere revisión manual (3 casos detectados) |
 | Cualquiera de los tres cupos agotado | Bloqueo + flujo de excepción |
 | Vehículo con chapa ya asignada a otro chofer activo | Bloqueo (RN-09) |
@@ -146,9 +148,10 @@ futuras elecciones— se bloquea, porque la lista negra vive a nivel `personas`.
 "no habilitado — consultar con coordinación". Esto evita filtración de información sensible
 sobre personas y reduce el riesgo reputacional.
 
-**Catálogo de motivos propuesto** (a confirmar — D-06): incumplimiento del operativo anterior,
-cobro sin prestar servicio, documentación falsa, vehículo no habilitado, conducta, doble
-imputación entre candidatos, a pedido de la persona.
+**Catálogo de motivos aprobado (D-06):** `incumplio_operativo`, `cobro_sin_servicio`,
+`documentacion_falsa`, `vehiculo_no_habilitado`, `conducta`, `doble_imputacion`,
+`a_pedido_de_la_persona`, `otro` (exige detalle).
+**Vigencia por defecto: indefinida**, revocable con motivo y responsable.
 
 ## 4. Excepciones
 

@@ -1,200 +1,148 @@
 # ROADMAP
 
-Versión 0.2 — decisiones D-01 a D-19 aplicadas · 2026-09-12
-
-> Las duraciones son estimaciones relativas, no compromisos. La fecha objetivo del próximo
-> Día D sigue pendiente (D-20) y es lo que fija el calendario real.
+Versión 0.3 — **calendario real** · 2026-09-12
+**Día D: domingo 4 de octubre de 2026.** Quedan **21 días de trabajo** (12 sep – 3 oct).
 
 ---
 
-## Fase 0 — Arquitectura y planificación ← **ESTÁS ACÁ**
+## 1. Lo primero: el plan anterior ya no sirve
 
-**Objetivo:** que nadie escriba una línea de código sobre supuestos.
+La v0.2 proponía 9 fases sin fecha. Con 21 días, ese plan es ficción. No alcanza para construir
+el sistema completo y decir lo contrario sería el peor servicio que te puedo hacer a tres
+semanas de un operativo.
 
-| Entregable | Estado |
+Lo que sí alcanza es un **MVP que resuelve los tres problemas que rompieron el operativo
+anterior**: choferes duplicados, cero registro de contratos y pagos, y planillas hechas a mano.
+Todo lo demás se construye después del 4 de octubre, con el sistema ya probado en fuego real.
+
+**La regla que ordena estas tres semanas:** el 2 de octubre tiene que existir el paquete completo
+de planillas en papel, exportado desde el sistema. Si algo falla el Día D, el operativo funciona
+igual. Esa salida no se negocia ni se posterga: es lo que convierte un riesgo de proyecto en un
+inconveniente.
+
+## 2. Qué entra y qué no
+
+### MVP — 4 de octubre
+
+| # | Alcance | Por qué es imprescindible |
+|---|---|---|
+| 1 | Alta y consulta de choferes, sin duplicados, verificados contra padrón | Sin esto no hay sistema |
+| 2 | Importación de los 695 + padrón (35.192) | Es el dato con el que se trabaja |
+| 3 | Asignación candidato / barrio / supervisor + cupos en cascada | El control de quién responde por quién |
+| 4 | Marcas de caja: contrato firmado, vale, anticipo, pago final, con folio | Lo que hoy no existe en ningún lado |
+| 5 | Exportación de planillas por barrio y candidato (PDF/XLSX) | Reemplaza las 21 hojas a mano y **es el plan B en papel** |
+| 6 | Roles, RLS y bitácora de auditoría | No se agrega después: se diseña adentro |
+| 7 | Lista negra mínima: marcar y bloquear | Barato de hacer, caro de no tener |
+
+### Después del 4 de octubre
+
+Excepciones con flujo de aprobación completo · clasificación automática de actividad GPS ·
+montos, libro de caja y arqueo · panel de auditoría con pantallas · pantallas de gestión
+multi-organización · reportes avanzados · geocercas (v2).
+
+> **`organizacion_id` va en las tablas desde la primera migración** aunque no haya pantallas para
+> gestionarlo. La columna es gratis ahora y cuesta 45 migraciones después.
+
+### GPS: qué se hace y qué no
+
+El Día D **no** se necesita clasificación automática de actividad — eso se verifica al día
+siguiente. En estas tres semanas alcanza con: registrar los dispositivos vinculados por CI y
+dejar el job de ingesta corriendo, guardando eventos. La clasificación `activo/inactivo` y los
+km se calculan el 5 de octubre, cuando ya no hay presión. Lo que **sí** hay que asegurar antes
+es la vinculación dispositivo ↔ chofer por cédula: si eso no está hecho el 3 de octubre, se
+repite el cruce por nombre del operativo anterior y los datos no sirven para decidir pagos.
+
+---
+
+## 3. Calendario
+
+### Semana 1 — sáb 12 a vie 18 de septiembre · Fundaciones y datos adentro
+
+| Día | Entregable |
 |---|---|
-| Auditoría de repositorio y planillas (`docs/audit-datos.md`) | ✅ |
-| Auditoría del padrón, 35.192 registros (`docs/audit-padron.md`) | ✅ |
-| Especificación funcional (`SPEC.md`) | ✅ |
-| Arquitectura (`docs/architecture.md`) | ✅ |
-| Modelo de datos y RLS (`docs/database.md`) | ✅ |
-| Roles y permisos (`docs/permissions.md`) | ✅ |
-| Flujos operativos (`docs/workflows.md`) | ✅ |
-| Seguridad y testing (`docs/security.md`) | ✅ |
-| Integración GPS (`docs/traccar.md`) | ✅ |
-| Decisiones (`docs/decisiones-pendientes.md`) | ✅ **16 de 21 resueltas** |
-| Modelo actualizado con las decisiones (v0.2) | ✅ |
-| Repositorio conectado | ✅ `krlit0xrodrigo/sistema-transporte-dia-d` |
-| **Aprobación escrita del responsable** | ⏳ |
+| 12–13 | Repo en GitHub, Next.js + TS + Tailwind + shadcn, proyectos Supabase (local/preview/prod), despliegue vacío en Vercel |
+| 13–14 | Migraciones base: `organizaciones`, `elecciones`, catálogos (barrios, 7 locales, candidatos, supervisores, `alias_catalogo`), usuarios/roles/permisos/scopes, trigger de `audit_log` |
+| 14–15 | Auth con MFA, middleware de sesión, layout, los 9 roles entrando y viendo lo suyo |
+| 15–16 | **Importación del padrón** (35.192 + participación) 🔴 *requiere el CSV re-exportado en UTF-8* |
+| 16–18 | `personas`, `choferes`, `asignaciones`, `vehiculos`, `apariciones_origen` + importador con staging |
+| 18 | **Importación de los 695 choferes** y sesión de resolución de los 64 CI duplicados |
 
-**Criterio de salida:** las 5 decisiones 🔴 están resueltas (D-01 padrón entregado, D-02 repo,
-D-03 duplicados, D-10 retención, D-13 legal autorizado). Falta la aprobación final de la
-arquitectura v0.2. Quedan abiertas D-06, D-11, D-14, D-20 y D-21, ninguna bloquea la Fase 1.
+**Salida de la semana:** la base tiene el padrón y los choferes reales, sin duplicados, con cada
+aparición archivada. Si esto no está el viernes 18, hay que recortar el alcance del MVP, no
+correr más rápido.
 
----
+🔴 **Bloqueante del lunes 14:** el padrón re-exportado en UTF-8. El archivo actual tiene 2.031
+apellidos con la Ñ perdida y no se repara por conversión. **Es lo primero que hay que pedir.**
 
-## Fase 1 — Fundaciones
+### Semana 2 — sáb 19 a vie 25 de septiembre · Operación
 
-**Objetivo:** un esqueleto seguro y desplegado, con identidad y catálogos. Cero funcionalidad de negocio.
+| Día | Entregable |
+|---|---|
+| 19–20 | Pantalla de alta de chofer con la cadena completa de validaciones (CI, padrón, lista negra, duplicado) |
+| 20–21 | Búsqueda por CI y por nombre, ficha del chofer con apariciones de origen y datos de padrón |
+| 21–22 | Cupos en cascada + `fn_consumir_cupo_cascada` con bloqueo transaccional + tablero con semáforo |
+| 22–23 | Lista negra mínima (marcar, bloquear, revocar con motivo) |
+| 23–25 | Folios + marcas de caja: contrato firmado, vale entregado, anticipo pagado, pago finalizado |
 
-- Repositorio, estructura, TypeScript estricto, linting, CI.
-- Proyectos Supabase: local, preview, staging, producción.
-- Migraciones de: **`organizaciones`**, `elecciones`, `barrios`, `locales_votacion` (los 7
-  reales del padrón), `mesas`, `candidatos`, `supervisores`, `alias_catalogo`, `usuarios`,
-  `roles`, `permisos`, `usuario_roles`, `rol_permisos`, `usuario_scopes`, `origenes_planilla`.
-- **`organizacion_id` en toda tabla de dominio desde la primera migración** (D-12). Agregarlo
-  después significa migrar 45 tablas y reescribir todas las políticas.
-- Trigger genérico de `audit_log` + `accesos_sensibles`.
-- Supabase Auth con MFA, middleware de sesión, layout base con shadcn/ui.
-- Despliegue en Vercel + Cloudflare con cabeceras y rate limiting.
-- Suite pgTAP inicial: RLS de catálogos y de usuarios.
+**Salida de la semana:** un operador puede dar de alta, asignar y registrar caja de punta a
+punta. Test de concurrencia: 50 altas simultáneas contra el mismo cupo, cero sobre-cupo.
 
-**Criterio de salida:** los 9 roles pueden iniciar sesión, cada uno ve exactamente lo que la
-matriz dice, y hay un test que lo demuestra. Ninguna tabla sin RLS y **ninguna fila visible
-entre organizaciones** (ambas verificadas en CI).
+### Semana 3 — sáb 26 de septiembre a vie 2 de octubre · Salidas y ensayo
 
----
+| Día | Entregable |
+|---|---|
+| 26–27 | **Exportación de planillas por barrio y candidato (PDF y XLSX)** — la salida más importante |
+| 27–28 | Reportes: resumen del operativo, por candidato, control de folios |
+| 28–29 | Vinculación de dispositivos Traccar por CI + job de ingesta guardando eventos |
+| 29–30 | Endurecimiento: cabeceras, rate limiting en Cloudflare, revisión de RLS, test de aislamiento entre organizaciones, escaneo de secretos |
+| 30 sep–1 oct | **Simulacro completo con el equipo real**, datos reales, en preview |
+| 1–2 oct | Corrección de lo que rompió el simulacro. Capacitación de supervisores y tesorería |
+| **2 oct** | 🟢 **Paquete completo de planillas en papel exportado y entregado** |
 
-## Fase 2 — Núcleo: personas, choferes y asignaciones
+**Salida de la semana:** el equipo ya usó el sistema una vez antes del día que importa, y el
+papel está impreso por si acaso.
 
-**Objetivo:** el corazón del sistema, con las restricciones que impiden repetir el desastre de duplicados.
+### Sábado 3 de octubre — Congelamiento
 
-- `personas`, `vehiculos`, `choferes`, `chofer_vehiculos`, `asignaciones`, `antecedentes`.
-- Índices únicos: un chofer por persona y elección; una asignación vigente; un vehículo activo.
-- `fn_alta_chofer` con todas las validaciones encadenadas.
-- Pantallas: alta, ficha, búsqueda por CI, búsqueda difusa por nombre, listados filtrados.
-- Enmascaramiento de PII por rol mediante vistas.
-- Historial de asignaciones.
+- Se congela el código. Nada se despliega salvo un fallo que impida operar.
+- Backup completo + verificación de restauración.
+- Modo solo lectura probado (el interruptor, no la teoría).
+- Verificación final: todos los dispositivos GPS vinculados por CI.
+- Alertas activas y alguien de guardia con acceso.
 
-**Criterio de salida:** es **imposible** crear dos choferes con el mismo CI en la misma
-elección, probado con un test de concurrencia. Alta completa en menos de 2 minutos.
+### Domingo 4 de octubre — Día D
 
----
+- Backup horario durante las 48 h.
+- Soporte dedicado, con el plan de contingencia en papel a mano.
+- Job de Traccar cada 5 minutos, sólo ingiriendo.
+- Nadie toca el esquema.
 
-## Fase 3 — Importación y migración de los datos actuales
+### Lunes 5 en adelante — Cierre y continuación
 
-**Objetivo:** meter los 695 registros reales, limpios, con trazabilidad.
-
-- `importaciones`, `importacion_filas`, `apariciones_origen`, normalizadores de CI y teléfono.
-- Importador Excel/CSV con staging, informe previo y resolución de conflictos fila por fila.
-- Carga de catálogos y de `alias_catalogo` con las variantes detectadas.
-- **Importación del padrón (35.192 filas) + `padron_participacion` (~95.000 filas).**
-  🔴 Bloqueante previo: **re-exportar el CSV en UTF-8** — el archivo actual tiene 2.031
-  apellidos con la Ñ perdida y no es reparable por conversión.
-- Verificación automática contra padrón: deriva "vota en Villa Hayes", local, mesa y orden.
-- Rechazo de las 20 filas sin CI (D-18) con informe.
-- **Sesión de trabajo humana** para resolver los 64 CI duplicados, dejando una participación
-  activa y el resto archivado en `apariciones_origen` (D-03).
-- Revisión de los 3 CI con nombre discrepante contra el padrón.
-- Carga de `antecedentes` del 07/06/2026 marcados con confiabilidad baja.
-
-**Criterio de salida:** ~605 choferes con CI válido, 0 duplicados activos, 535 verificados en el
-padrón, cada registro con su origen identificado y cada aparición archivada, más un informe de
-qué se decidió con cada conflicto.
+Cálculo de actividad y km · liquidación de pagos finales · generación de antecedentes ·
+retrospectiva · y recién ahí, todo lo diferido de la sección 2.
 
 ---
 
-## Fase 4 — Control: lista negra, excepciones y cupos
+## 4. Riesgos de este calendario
 
-- `lista_negra`, `excepciones`, `cupos`, `cupo_movimientos`.
-- `fn_consumir_cupo_cascada` con bloqueo transaccional sobre los tres ámbitos (D-05).
-- Flujo de solicitud/aprobación de excepciones con separación de funciones.
-- Tablero de cupos con semáforo y alertas al 90 %.
-- Integración de los tres controles en el alta de chofer.
+| Riesgo | Señal temprana | Qué hacer |
+|---|---|---|
+| **El padrón no llega en UTF-8 a tiempo** | No está el lunes 14 | Importar sin los 2.031 apellidos con Ñ y corregirlos después. Peor, pero no bloquea |
+| Los 64 duplicados no se resuelven el 18 | La sesión de resolución se posterga | Es una decisión política (D-03), no técnica: si no hay quien decida, el sistema arranca con esos 64 en estado bloqueado |
+| Se llega al 26 sin caja funcionando | Fin de semana 2 sin la pantalla de marcas | Se recorta: caja queda en papel este operativo, el resto del sistema sigue |
+| El simulacro del 30 sale mal | — | Es exactamente para eso. Hay 3 días de margen; por eso está el 30 y no el 3 |
+| Alcance que crece | Cualquier "ya que estamos" | Todo pedido nuevo va a la lista de post-4-de-octubre. Sin excepción |
 
-**Criterio de salida:** prueba de carga con 50 altas simultáneas contra el mismo cupo → cero
-sobre-cupo. Ninguna excepción aprobada por su propio solicitante.
+**El riesgo mayor no es técnico:** son 21 días para un sistema que registra pagos. Si algo se
+atrasa, lo que se recorta es alcance, nunca las pruebas ni el respaldo en papel.
 
----
+## 5. Si hay que recortar, en este orden
 
-## Fase 5 — Contratos, folios y caja
-
-**El módulo de mayor valor: hoy no existe registro digital de nada de esto.**
-
-- `folios_series`, `folios`, `contratos`, `vales_combustible`, `anticipos`, `pagos_finales`,
-  `movimientos_caja`, `arqueos`.
-- `fn_asignar_folio` con `for update skip locked`.
-- Marcas de estado con fecha y responsable: firmado, vale entregado, anticipo pagado, pago
-  finalizado (D-09, D-16). **Sin generación de PDF.**
-- Campos de monto opcionales; libro de caja y arqueo disponibles pero no obligatorios.
-- Flujo autorización → marca de pago con roles separados.
-
-**Criterio de salida:** un folio no se puede repetir ni bajo concurrencia; un chofer no puede
-figurar como pagado dos veces; toda marca tiene autor y fecha.
-
----
-
-## Fase 6 — GPS / Traccar
-
-- `dispositivos_gps`, `traccar_eventos`, `actividad_diaria`.
-- Job de sincronización idempotente con ventana incremental.
-- ABM de dispositivos y vinculación por CI.
-- `fn_recalcular_actividad` con criterio `v1_movimiento` versionado (D-04): activo = hubo
-  movimiento, **sin umbral de km**; los km se muestran como información.
-- Panel de actividad y conexión con el pago final.
-- *Sin geocercas* (D-15).
-
-**Criterio de salida:** 100 % de los dispositivos vinculados por FK, ningún cruce por nombre.
-Recálculo del criterio sin perder la clasificación anterior.
-
----
-
-## Fase 7 — Reportes, exportaciones y Google Sheets
-
-- Reportes: resumen, por candidato, por barrio, de actividad, de caja, de folios.
-- Exportación PDF/XLSX de planillas por barrio y candidato — **reemplaza las 21 hojas manuales**.
-- Marca de agua, registro en `exportaciones`, límites y alertas.
-- Panel de auditoría consultable.
-- *Sin sincronización con Google Sheets* (D-19): la importación inicial ya se hizo en la Fase 3.
-
-**Criterio de salida:** las planillas de papel salen del sistema, no de Excel. Toda exportación
-queda registrada y es rastreable.
-
----
-
-## Fase 8 — Endurecimiento y preparación del Día D
-
-- Pruebas de carga con volumen objetivo.
-- Revisión de seguridad completa y test de penetración básico.
-- Modo solo lectura, backups horarios, plan de contingencia en papel.
-- Alertas y panel de salud.
-- **Simulacro completo del operativo** con datos sintéticos y el equipo real.
-- Capacitación de supervisores y tesorería, manual de uso.
-
-**Criterio de salida:** simulacro superado, equipo capacitado, plan de contingencia probado.
-
----
-
-## Fase 9 — Día D y cierre
-
-- Monitoreo en vivo, soporte dedicado.
-- Sincronización de GPS cada 5 minutos.
-- Cierre del operativo: liquidación, arqueo final, generación de antecedentes, revocación de
-  accesos, congelamiento de la elección.
-- Retrospectiva y ajuste del modelo para el próximo operativo.
-
----
-
-## Dependencias críticas
-
-```
-✅ D-01 D-02 D-03 D-04 D-05 D-07 D-08 D-09 D-10 D-12 D-13 D-15 D-16 D-17 D-18 D-19  aplicadas
-
-🔴 Padrón re-exportado en UTF-8 ──────▶ Fase 3   (único bloqueante técnico abierto)
-🟠 D-06 (motivos lista negra) ────────▶ Fase 4
-🟠 D-21 (70 fuera de padrón) ─────────▶ Fase 3
-🟡 D-11 (tamaño del equipo) ──────────▶ Fase 1 (matriz de permisos)
-🟡 D-14 (responsable seguridad) ──────▶ Fase 8
-🟡 D-20 (fecha del Día D) ────────────▶ todo el calendario
-   D-13 (confirmación legal) ─────────▶ compuerta de producción, no de desarrollo
-```
-
-## Principio de priorización
-
-Si hay que recortar alcance por tiempo, el orden de lo que **no** se recorta es:
-
-1. Identidad sin duplicados (Fase 2) — sin esto todo lo demás miente.
-2. Caja con folios (Fase 5) — es donde está la plata y el riesgo.
-3. Cupos y excepciones (Fase 4) — es donde está el control.
-4. GPS (Fase 6) — mejora la verificación, pero hay alternativa en papel.
-5. Sheets y reportes avanzados (Fase 7) — se puede exportar a mano al principio.
+1. **Identidad sin duplicados + padrón** — sin esto, todo lo demás miente.
+2. **Exportación de planillas** — es el entregable que reemplaza el trabajo manual y es el plan B.
+3. **Cupos y asignación** — el control de quién responde por quién.
+4. **Marcas de caja y folios** — lo que hoy no existe.
+5. **Lista negra** — barato, alto valor.
+6. GPS — se puede resolver con los eventos crudos después del operativo.
+7. Reportes avanzados — se exporta a Excel y se arma a mano una vez más.

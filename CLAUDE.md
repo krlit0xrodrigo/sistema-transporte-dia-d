@@ -6,8 +6,9 @@
 **Proyecto:** Sistema de gestión de choferes — Logística Día D, Villa Hayes (Presidente Hayes, Paraguay)
 **Repositorio:** `github.com/krlit0xrodrigo/sistema-transporte-dia-d` (rama `main`)
 **Estado actual:** `FASE 0 — Arquitectura y planificación`. **No hay implementación autorizada.**
-**Decisiones:** 16 de 21 resueltas. Ver `docs/decisiones-pendientes.md`.
-**Última actualización:** 2026-09-12 (v0.2 — decisiones aplicadas)
+**Decisiones:** las 21 resueltas. Ver `docs/decisiones-pendientes.md`.
+**🗓️ Día D: domingo 4 de octubre de 2026 — 21 días de trabajo.** Ver `ROADMAP.md`.
+**Última actualización:** 2026-09-12 (v0.3 — calendario real)
 
 ---
 
@@ -86,6 +87,13 @@ Los datos de partida son planillas Excel/Google Sheets con calidad baja
 - Nunca ejecutar `DROP`, `TRUNCATE`, `DELETE` sin `WHERE`, ni `supabase db reset` contra un
   proyecto que no sea local.
 - Cualquier migración que borre o renombre columnas requiere aprobación explícita en el PR.
+
+## 6.bis Alcance bajo presión de calendario
+
+Con 21 días hasta el operativo, **la variable de ajuste es el alcance, nunca las pruebas ni el
+respaldo en papel.** Todo pedido nuevo va a la lista de post-4-de-octubre. Si una funcionalidad
+del MVP no llega, se recorta según el orden de `ROADMAP.md` §5 y se dice en el momento, no el
+2 de octubre.
 
 ## 7. Qué hacer ante información faltante
 

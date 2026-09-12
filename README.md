@@ -2,9 +2,12 @@
 
 Villa Hayes, Presidente Hayes, Paraguay.
 
-> **Estado: FASE 0 — Arquitectura y planificación (v0.2).**
+> **Estado: FASE 0 — Arquitectura y planificación (v0.3).**
 > No hay implementación. No crear tablas ni código hasta que la arquitectura esté aprobada.
-> Ver `CLAUDE.md` §1. **16 de 21 decisiones resueltas.**
+> Ver `CLAUDE.md` §1. **Las 21 decisiones resueltas.**
+>
+> 🗓️ **Día D: domingo 4 de octubre de 2026 — 21 días de trabajo.** El alcance está acotado a un
+> MVP; ver [`ROADMAP.md`](ROADMAP.md).
 
 ## Qué es
 
@@ -29,7 +32,7 @@ Vercel · Cloudflare · Google Sheets API · Traccar API.
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | Reglas de trabajo. **Leer primero.** |
 | [`SPEC.md`](SPEC.md) | Alcance, actores, reglas de negocio |
-| [`ROADMAP.md`](ROADMAP.md) | Fases y criterios de salida |
+| [`ROADMAP.md`](ROADMAP.md) | **Calendario de 21 días al 4 de octubre**, MVP y orden de recorte |
 | [`docs/audit-datos.md`](docs/audit-datos.md) | Auditoría de las planillas de origen |
 | [`docs/audit-padron.md`](docs/audit-padron.md) | Auditoría del padrón (35.192 registros) |
 | [`docs/architecture.md`](docs/architecture.md) | Arquitectura y decisiones (12 ADR) |
@@ -38,7 +41,7 @@ Vercel · Cloudflare · Google Sheets API · Traccar API.
 | [`docs/workflows.md`](docs/workflows.md) | Flujos operativos |
 | [`docs/security.md`](docs/security.md) | Riesgos, controles, cumplimiento, testing |
 | [`docs/traccar.md`](docs/traccar.md) | Integración GPS |
-| [`docs/decisiones-pendientes.md`](docs/decisiones-pendientes.md) | Registro de decisiones — **5 abiertas** |
+| [`docs/decisiones-pendientes.md`](docs/decisiones-pendientes.md) | Registro de decisiones — **21 resueltas, 0 abiertas** |
 
 ## Datos y privacidad
 

@@ -1,7 +1,8 @@
 # SPEC.md — Especificación funcional
 
 **Sistema de gestión de choferes — Logística Día D, Villa Hayes**
-Versión 0.2 — decisiones D-01 a D-19 aplicadas · 2026-09-12
+Versión 0.3 — **las 21 decisiones resueltas** · 2026-09-12
+**Día D: domingo 4 de octubre de 2026.**
 
 ---
 
@@ -124,8 +125,8 @@ funciones de caja no reciben ni consultan `padron_participacion`.
 | Administrador general | Configura el operativo, cupos, usuarios, cierra la elección |
 | Coordinador de logística | Alta y asignación de choferes, gestiona excepciones |
 | Tesorería / Caja | Emite folios, vales, anticipos y pagos; hace arqueo |
-| Supervisor / Referente | Ve y gestiona solo sus choferes y su barrio |
-| Candidato / Concejal | Consulta solo sus choferes y su cupo |
+| Supervisor / Referente | Ve y gestiona solo sus choferes y su barrio. **Responde por cada chofer que declara** (RN-16) |
+| Candidato / Concejal | Consulta solo sus choferes y su cupo. **Responde por cada chofer que declara** (RN-16) |
 | Operador de carga | Carga datos, sin acceso a caja ni a lista negra |
 | Auditor | Solo lectura total + acceso a bitácora |
 | Consulta | Solo lectura limitada, sin datos de contacto ni montos |
@@ -165,13 +166,16 @@ funciones de caja no reciben ni consultan `padron_participacion`.
 | RN-13 | Un chofer con antecedente negativo en elección anterior se marca en el alta, no se bloquea automáticamente. 🔶 |
 | RN-14 | Ningún cálculo de pago, alta o cupo lee la afiliación partidaria ni la participación electoral del padrón. |
 | RN-15 | Ningún dato de una organización es visible desde otra. ✅ D-12 |
+| RN-16 | **Todo chofer tiene un responsable declarado** — el supervisor o concejal que lo presentó. Un alta sin responsable se rechaza. ✅ D-14 |
+| RN-17 | Un chofer que no figura en el padrón de Villa Hayes se acepta, marcado `fuera_de_padron`. No se bloquea ni se le impide cobrar. ✅ D-21 |
+| RN-18 | Una entrada de lista negra usa un motivo del catálogo cerrado; `otro` exige detalle. La vigencia por defecto es indefinida. ✅ D-06 |
 
 ## 7. Criterios de aceptación de la Fase 0
 
 - [x] Los documentos están escritos y revisados.
 - [x] Auditoría de planillas y de padrón completadas.
-- [x] 16 de 21 decisiones respondidas y aplicadas al modelo.
+- [x] **Las 21 decisiones respondidas y aplicadas al modelo.**
 - [x] El modelo de datos está validado contra los 11 riesgos de la auditoría.
-- [ ] Padrón re-exportado en UTF-8 (bloqueante para la Fase 3).
-- [ ] D-06, D-11, D-14, D-20 y D-21 respondidas.
+- [x] Fecha del Día D confirmada (4 de octubre) y roadmap recalculado a 21 días.
+- [ ] **Padrón re-exportado en UTF-8** — único bloqueante técnico, se necesita el lunes 14.
 - [ ] El responsable del proyecto aprueba antes de crear la primera migración.

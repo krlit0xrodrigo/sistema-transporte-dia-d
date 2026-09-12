@@ -1,6 +1,6 @@
 # Modelo de datos
 
-Versión 0.2 — decisiones D-01 a D-19 aplicadas · 2026-09-12
+Versión 0.3 — las 21 decisiones aplicadas · 2026-09-12 · Día D: 4 de octubre de 2026
 **Propuesta. Ninguna tabla debe crearse hasta la aprobación de la Fase 1.**
 PostgreSQL 15+ sobre Supabase.
 
@@ -69,8 +69,12 @@ Un usuario puede acumular scopes (supervisor de 3 barrios, por ejemplo).
 **`elecciones`** — `id`, `organizacion_id`, `nombre`, `tipo`
 (`interna`|`municipal`|`general`|`otra`), `fecha`, `estado`
 (`planificacion`|`activa`|`cerrada`), `municipio`, `departamento`.
-Primer registro real: **Internas ANR Municipales — 07/06/2026** (elección de referencia del
-histórico existente).
+Dos registros reales al arrancar:
+
+| Nombre | Tipo | Fecha | Estado | Para qué |
+|---|---|---|---|---|
+| Internas ANR Municipales | `interna` | 2026-06-07 | `cerrada` | Antecedentes históricos |
+| **Día D — Municipales Villa Hayes** | `municipal` | **2026-10-04** | `planificacion` → `activa` | **El operativo** |
 
 **`barrios`** — `id`, `organizacion_id`, `codigo`, `nombre`, `municipio`, `zona`, `activo`.
 Semilla: los 23 barrios detectados, normalizados. La zona `6 POZO COLORADO` del padrón
@@ -141,7 +145,13 @@ sin ceros a la izquierda)**, `ci_original`, `nombres`, `apellidos`,
 **`choferes`** — participación de una persona en una elección.
 `id`, `organizacion_id`, `persona_id`, `eleccion_id`, `numero_orden?`, `estado_servicio`
 (`contratado`|`voluntario`|`pendiente`), `estado` (`borrador`|`activo`|`suspendido`|`baja`),
-`fecha_alta`, `dado_de_baja_en?`, `motivo_baja?`, `origen_planilla_id`, `observaciones`.
+`fecha_alta`, `dado_de_baja_en?`, `motivo_baja?`, `origen_planilla_id`, `observaciones`,
+**`declarado_por` (FK `usuarios`, not null)**, **`responsable_persona_id` (FK `personas`, not null)**.
+
+> **D-14 / RN-16:** `declarado_por` es la cuenta que hizo el alta; `responsable_persona_id` es el
+> supervisor o concejal que **responde** por ese chofer. Ambos obligatorios: un alta sin
+> responsable se rechaza. Habilita el reporte "choferes por responsable", que es la pregunta que
+> se hace cuando algo sale mal.
 
 **`chofer_vehiculos`** — `chofer_id`, `vehiculo_id`, `principal`, `desde`, `hasta?`.
 
@@ -151,11 +161,23 @@ Historial completo: reasignar cierra la vigente y abre otra, nunca hace `UPDATE`
 
 ### E. Control
 
-**`lista_negra`** — `id`, `organizacion_id`, `persona_id`, `motivo_codigo`, `motivo_detalle`,
+**`lista_negra`** — `id`, `organizacion_id`, `persona_id`, `motivo_codigo`, `motivo_detalle?`,
 `eleccion_origen_id?`, `evidencia_url?`, `severidad` (`bloqueo_total`|`advertencia`),
-`vigente_desde`, `vigente_hasta?` (**nulo = indefinido, valor por defecto**, coherente con D-10),
+`vigente_desde`, `vigente_hasta?` (**nulo = indefinido, valor por defecto** — D-06 y D-10),
 `registrado_por`, `aprobado_por`, `revocado_en?`, `revocado_por?`, `motivo_revocacion?`.
-Catálogo de motivos pendiente de aprobación (D-06).
+
+**Catálogo aprobado (D-06):**
+
+```sql
+create type motivo_lista_negra as enum (
+  'incumplio_operativo', 'cobro_sin_servicio', 'documentacion_falsa',
+  'vehiculo_no_habilitado', 'conducta', 'doble_imputacion',
+  'a_pedido_de_la_persona', 'otro'
+);
+
+alter table lista_negra add constraint ck_motivo_detalle
+  check (motivo_codigo <> 'otro' or nullif(trim(motivo_detalle), '') is not null);
+```
 
 **`excepciones`** — `id`, `organizacion_id`, `persona_id?`, `chofer_id?`, `eleccion_id`, `tipo`
 (`lista_negra`|`cupo`|`fuera_de_padron`|`doble_vehiculo`|`sin_actividad`|`otro`), `motivo`,
@@ -363,6 +385,11 @@ create unique index ux_pago_final_chofer
 -- 9. Padrón: cédula única por snapshot  (verificado: 35.192 CI, 0 duplicados)
 create unique index ux_padron_snapshot_ci on padron_electoral (snapshot_id, ci);
 create unique index ux_padron_part on padron_participacion (snapshot_id, ci, eleccion_codigo);
+
+-- 10. Todo chofer tiene responsable declarado  (D-14 / RN-16)
+alter table choferes
+  alter column declarado_por set not null,
+  alter column responsable_persona_id set not null;
 ```
 
 ## 6. Funciones de negocio (RPC)
@@ -480,7 +507,7 @@ Búsqueda por nombre con `pg_trgm`, nunca con `LIKE '%…%'`.
 
 | Paso | Acción | Cifra esperada |
 |---|---|---|
-| 1 | Crear la organización y la elección *Internas ANR Municipales 07/06/2026* | 1 / 1 |
+| 1 | Crear la organización y las dos elecciones (07/06/2026 cerrada, 04/10/2026 activa) | 1 / 2 |
 | 2 | Sembrar `locales_votacion` desde el padrón | 7 |
 | 3 | **Re-exportar el padrón en UTF-8** e importarlo | 35.192 |
 | 4 | Importar `padron_participacion` (5 elecciones) | ~95.000 filas |
@@ -489,7 +516,7 @@ Búsqueda por nombre con `pg_trgm`, nunca con `LIKE '%…%'`.
 | 7 | **Rechazar las filas sin CI** (D-18) | −20 |
 | 8 | Registrar **todas** las apariciones en `apariciones_origen` | 675 |
 | 9 | Resolver los 64 CI duplicados: una participación activa, el resto queda como aparición | 134 → 64 activas |
-| 10 | Verificar contra padrón: derivar "vota en Villa Hayes" | 535 verificados · 70 fuera (D-21) |
+| 10 | Verificar contra padrón: derivar "vota en Villa Hayes" | 535 verificados · 70 `fuera_de_padron`, **aceptados** (D-21) |
 | 11 | Marcar los 3 CI con nombre discrepante para revisión | 3 |
 | 12 | Normalizar teléfonos a E.164; marcar los 4 truncados | 609 → ~605 |
 | 13 | Crear `vehiculos` desde chapa/marca/modelo | 416 |
