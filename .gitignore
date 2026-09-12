@@ -20,3 +20,6 @@ __pycache__/
 # Supabase CLI temporales
 supabase/.temp/
 supabase/supabase/
+
+# Auditorias generadas localmente
+audit-*.txt
