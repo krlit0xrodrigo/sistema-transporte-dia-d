@@ -5,21 +5,26 @@
 
 **Proyecto:** Sistema de gestión de choferes — Logística Día D, Villa Hayes (Presidente Hayes, Paraguay)
 **Repositorio:** `github.com/krlit0xrodrigo/sistema-transporte-dia-d` (rama `main`)
-**Estado actual:** `FASE 0 — Arquitectura y planificación`. **No hay implementación autorizada.**
+**Estado actual:** `SPRINT — Día 1 de 5`. Arquitectura aprobada; **la base de datos está escrita
+y probada** (45 tablas, 124 políticas RLS, 28 invariantes en verde).
 **Decisiones:** las 21 resueltas. Ver `docs/decisiones-pendientes.md`.
-**🗓️ Día D: domingo 4 de octubre de 2026 — 21 días de trabajo.** Ver `ROADMAP.md`.
-**Última actualización:** 2026-09-12 (v0.3 — calendario real)
+**🗓️ Sistema operativo: miércoles 16 de septiembre · Día D: domingo 4 de octubre.**
+**Última actualización:** 2026-09-12 (v0.4 — sprint de 5 días)
 
 ---
 
 ## 1. Regla número uno
 
-> **Ningún agente crea tablas definitivas, migraciones aplicadas a producción, ni código de
-> funcionalidad hasta que la arquitectura esté aprobada por escrito por el responsable del
-> proyecto.**
+> **Antes de tocar el esquema, correr `./scripts/test-db.sh`. Si un invariante se pone en rojo,
+> se arregla antes de seguir — no se comenta el test.**
 
-Mientras el estado sea `FASE 0`, el trabajo permitido es: auditar, documentar, proponer,
-prototipar en ramas descartables y escribir migraciones **como borrador no aplicado**.
+Los invariantes que protege esa suite son los que costaron el operativo anterior: un CI una sola
+vez por elección, CI obligatorio, responsable declarado, una asignación vigente, cupo con
+bloqueo, folios sin repetir, un solo pago final, bitácora inviolable y aislamiento entre
+organizaciones. Ninguno se negocia por velocidad.
+
+**Alcance:** aprobado el MVP de 5 días (`ROADMAP.md` §2). Todo pedido nuevo va a la lista del
+17 de septiembre en adelante.
 
 ## 2. Contexto de negocio (resumen mínimo)
 

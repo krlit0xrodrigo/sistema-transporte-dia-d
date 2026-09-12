@@ -2,12 +2,21 @@
 
 Villa Hayes, Presidente Hayes, Paraguay.
 
-> **Estado: FASE 0 — Arquitectura y planificación (v0.3).**
-> No hay implementación. No crear tablas ni código hasta que la arquitectura esté aprobada.
-> Ver `CLAUDE.md` §1. **Las 21 decisiones resueltas.**
+> **Estado: SPRINT — Día 1 de 5.**
+> Base de datos escrita y probada: **45 tablas, 124 políticas RLS, 28 invariantes en verde.**
+> Las 21 decisiones resueltas.
 >
-> 🗓️ **Día D: domingo 4 de octubre de 2026 — 21 días de trabajo.** El alcance está acotado a un
-> MVP; ver [`ROADMAP.md`](ROADMAP.md).
+> 🗓️ **Sistema operativo: miércoles 16 de septiembre. Día D: domingo 4 de octubre.**
+> Ver [`ROADMAP.md`](ROADMAP.md).
+
+## Probar la base sin instalar nada
+
+```bash
+./scripts/test-db.sh
+```
+
+Levanta un PostgreSQL efímero, aplica las migraciones y el seed, y corre los invariantes
+críticos. Sin Supabase, sin Docker, sin red.
 
 ## Qué es
 
