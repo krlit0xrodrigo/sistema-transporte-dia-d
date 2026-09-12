@@ -17,8 +17,22 @@ import psycopg
 # --------------------------------------------------------------------------
 # Conexión
 # --------------------------------------------------------------------------
-def conectar() -> psycopg.Connection:
-    """Conecta usando DATABASE_URL. Nunca hardcodear credenciales."""
+def conectar(statement_timeout_ms: int = 120_000,
+             tx_idle_timeout_ms: int = 600_000) -> psycopg.Connection:
+    """
+    Conecta usando DATABASE_URL. Nunca hardcodear credenciales.
+
+    Sobre los parámetros de red: sin keepalives, una conexión que se corta
+    del otro lado deja al cliente esperando para siempre en recv(). El
+    proceso no falla, no reintenta y no se puede cancelar — se queda
+    colgado. Con keepalives el sistema operativo detecta el peer muerto y
+    psycopg levanta OperationalError, que sí se puede manejar.
+
+    Los timeouts son de servidor y actúan aunque el cliente esté bloqueado:
+      statement_timeout ................ corta una sentencia que se pasa
+      idle_in_transaction_session_timeout  corta una transacción abandonada,
+                                       liberando los locks que tomó
+    """
     url = os.environ.get("DATABASE_URL")
     if not url:
         raise SystemExit(
@@ -26,7 +40,33 @@ def conectar() -> psycopg.Connection:
             "  Supabase: Project Settings → Database → Connection string (URI)\n"
             "  Local:    postgresql://postgres@/diad_test?host=/tmp&port=54329"
         )
-    return psycopg.connect(url, autocommit=False)
+
+    if ".supabase.co:5432" in url or "db." in url and ":5432" in url:
+        print("  ⚠ Estás usando la conexión DIRECTA de Supabase (puerto 5432).\n"
+              "    Para cargas largas conviene el Session Pooler (puerto 5432 de\n"
+              "    aws-0-<region>.pooler.supabase.com) o el Transaction Pooler (6543):\n"
+              "    tolera mejor la latencia y no depende de IPv6.\n"
+              "    Project Settings → Database → Connection pooling.")
+
+    con = psycopg.connect(
+        url,
+        autocommit=False,
+        connect_timeout=15,
+        # Detección de peer muerto: a los ~30s de silencio empieza a sondear,
+        # y tras 5 sondas fallidas la conexión da error en vez de colgarse.
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5,
+        application_name="importador-dia-d",
+    )
+    with con.cursor() as cur:
+        cur.execute("select set_config('statement_timeout', %s, false)",
+                    (str(statement_timeout_ms),))
+        cur.execute("select set_config('idle_in_transaction_session_timeout', %s, false)",
+                    (str(tx_idle_timeout_ms),))
+    con.commit()
+    return con
 
 
 # --------------------------------------------------------------------------

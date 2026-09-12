@@ -12,3 +12,11 @@ node_modules/
 *.xlsx
 *.csv
 !.env.example
+
+# Python
+__pycache__/
+*.pyc
+
+# Supabase CLI temporales
+supabase/.temp/
+supabase/supabase/
