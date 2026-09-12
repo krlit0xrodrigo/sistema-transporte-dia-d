@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.env
+.env.local
+.env*.local
+.vercel
+*.log
+.DS_Store
+/coverage
+/dist
+# Nunca versionar datos reales
+*.xlsx
+*.csv
+!.env.example
