@@ -98,7 +98,7 @@ select r.id, p.id from roles r join permisos p on p.codigo = any(array[
   'gps.ver','gps.gestionar_dispositivos','gps.recalcular',
   'datos.importar','datos.confirmar_importacion','datos.exportar','datos.exportar_pii',
   'reportes.ver','reportes.ver_montos','auditoria.ver','auditoria.exportar',
-  'admin.usuarios','admin.catalogos','admin.elecciones','admin.modo_lectura'
+  'admin.usuarios','admin.roles','admin.catalogos','admin.elecciones','admin.modo_lectura'
 ]) where r.codigo = 'admin' on conflict do nothing;
 
 insert into rol_permisos(rol_id, permiso_id)
@@ -148,7 +148,9 @@ select r.id, p.id from roles r join permisos p on p.codigo = any(array[
 
 insert into rol_permisos(rol_id, permiso_id)
 select r.id, p.id from roles r join permisos p on p.codigo = any(array[
-  'choferes.ver','asignaciones.ver','cupos.ver','gps.ver'
+  -- Solo lectura: ve la ficha completa de una persona y nada más.
+  -- Sin caja, sin lista negra, sin padrón, sin exportar, sin admin.
+  'choferes.ver','choferes.ver_pii','personas.ver','asignaciones.ver','cupos.ver','gps.ver'
 ]) where r.codigo = 'consulta' on conflict do nothing;
 
 -- ---------------------------------------------------------------------

@@ -379,6 +379,10 @@ def main() -> int:
     ap.add_argument("--confirmar", action="store_true",
                     help="aplica al dominio; sin esto sólo llena el staging")
     ap.add_argument("--hoja", default=HOJA)
+    ap.add_argument("--eleccion", metavar="AAAA-MM-DD",
+                    help="Fecha de la elección a la que pertenecen estas planillas. "
+                         "Sin este dato el importador usa la elección ACTIVA, que casi "
+                         "nunca es la correcta para una planilla vieja.")
     args = ap.parse_args()
 
     ruta = Path(args.archivo)
@@ -401,8 +405,33 @@ def main() -> int:
 
     cur.execute("select id from organizaciones where codigo='dia-d-vh'")
     org = cur.fetchone()[0]
-    cur.execute("select id from elecciones where organizacion_id=%s and estado='activa'", (org,))
-    eleccion = cur.fetchone()[0]
+    # A qué elección pertenecen estas filas.
+    #
+    # Esto ya salió mal una vez: el importador tomaba siempre la elección
+    # ACTIVA, así que las planillas de la interna del 07/06/2026 entraron
+    # como participaciones del operativo del 04/10/2026 y el listado
+    # operativo apareció con 599 choferes que nadie había dado de alta.
+    # Lo arregló la migración 0007. Para que no se repita, la elección se
+    # declara; si no se declara, se avisa fuerte antes de escribir nada.
+    if args.eleccion:
+        cur.execute("""select id, nombre, fecha from elecciones
+                        where organizacion_id=%s and fecha=%s and deleted_at is null""",
+                    (org, args.eleccion))
+        fila = cur.fetchone()
+        if not fila:
+            raise SystemExit(f"No hay ninguna elección con fecha {args.eleccion} en el catálogo.")
+    else:
+        cur.execute("""select id, nombre, fecha from elecciones
+                        where organizacion_id=%s and estado='activa' and deleted_at is null
+                        order by fecha desc limit 1""", (org,))
+        fila = cur.fetchone()
+        if not fila:
+            raise SystemExit("No hay elección activa. Pasá --eleccion AAAA-MM-DD.")
+        print(f"\n  ⚠ Sin --eleccion: se usa la elección ACTIVA.")
+        print(f"    Si esta planilla es histórica, esto la carga en el operativo equivocado.\n")
+
+    eleccion, eleccion_nombre, eleccion_fecha = fila
+    print(f"  Elección destino: {eleccion_nombre} ({eleccion_fecha})\n")
     cur.execute("select id from origenes_planilla where organizacion_id=%s and codigo=%s",
                 (org, ORIGEN))
     origen = cur.fetchone()[0]

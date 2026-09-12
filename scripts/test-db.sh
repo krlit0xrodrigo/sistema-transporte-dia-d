@@ -60,9 +60,14 @@ psql_ -d "$DB" -q -v ON_ERROR_STOP=1 -f "$ROOT/supabase/seed.sql"
 
 if [[ $CORRER_TESTS -eq 1 ]]; then
   echo "→ invariantes"
-  psql_ -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/supabase/tests/01_invariantes.sql" 2>&1 \
-    | grep -E "OK |FALL|^==|ERROR|PASARON" \
-    | sed 's/^psql:[^ ]* //; s/^NOTICE:  //'
+  # En orden: 01 crea los datos sintéticos, 02 la caja sobre ellos,
+  # 03 exporta y vincula GPS sobre lo que dejaron los dos anteriores.
+  for t in "$ROOT"/supabase/tests/*.sql; do
+    printf '   %s\n' "$(basename "$t")"
+    psql_ -d "$DB" -v ON_ERROR_STOP=1 -f "$t" 2>&1 \
+      | grep -E "OK |FALL|^==|ERROR|VERDE|PASARON" \
+      | sed 's/^psql:[^ ]* //; s/^NOTICE:  //'
+  done
 else
   echo "→ invariantes omitidos (--no-tests): base limpia para importar"
 fi
