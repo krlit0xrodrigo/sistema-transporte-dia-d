@@ -5,8 +5,9 @@
 
 **Proyecto:** Sistema de gestión de choferes — Logística Día D, Villa Hayes (Presidente Hayes, Paraguay)
 **Repositorio:** `github.com/krlit0xrodrigo/sistema-transporte-dia-d` (rama `main`)
-**Estado actual:** `SPRINT — Día 1 de 5`. Arquitectura aprobada; **la base de datos está escrita
-y probada** (45 tablas, 124 políticas RLS, 28 invariantes en verde).
+**Estado actual:** `SPRINT — Día 2 de 5 cerrado`. Base de datos escrita y probada (45 tablas,
+124 políticas RLS, 28 invariantes en verde) y **datos reales adentro**: padrón de 35.192,
+604 choferes activos, 0 duplicados.
 **Decisiones:** las 21 resueltas. Ver `docs/decisiones-pendientes.md`.
 **🗓️ Sistema operativo: miércoles 16 de septiembre · Día D: domingo 4 de octubre.**
 **Última actualización:** 2026-09-12 (v0.4 — sprint de 5 días)
@@ -131,6 +132,7 @@ alguien distinto del autor la ejecutó en preview.
 | `ROADMAP.md` | Fases, entregables y criterios de salida |
 | `docs/audit-datos.md` | Auditoría de las planillas de origen (hallazgos reales) |
 | `docs/audit-padron.md` | Auditoría del padrón de Villa Hayes (35.192 registros) |
+| `docs/despliegue.md` | Aplicar el esquema y cargar los datos en Supabase |
 | `docs/architecture.md` | Arquitectura técnica y decisiones |
 | `docs/database.md` | Modelo de datos, relaciones, RLS |
 | `docs/permissions.md` | Roles, permisos y matriz de acceso |

@@ -51,7 +51,7 @@ begin
     values (v_u1, v_org1, v_ele, 'global'), (v_u2, v_org2, null, 'global')
     on conflict do nothing;
 
-  -- Persona responsable (RN-16) y candidato
+  -- Candidato de prueba (RN-16: el responsable es un supervisor o un concejal)
   insert into personas(organizacion_id, ci, nombres, apellidos)
     values (v_org1,'1000001','Responsable','De Prueba') on conflict do nothing;
   select id into v_resp from personas where organizacion_id=v_org1 and ci='1000001';
@@ -110,25 +110,25 @@ do $$
 declare
   v_org uuid := '00000000-0000-0000-0000-0000000000a1';
   v_ele uuid := '00000000-0000-0000-0000-0000000000e2';
-  v_p uuid; v_u uuid := '00000000-0000-0000-0000-000000000501'; v_r uuid; ok boolean := false;
+  v_p uuid; v_u uuid := '00000000-0000-0000-0000-000000000501'; v_cand_t uuid; ok boolean := false;
 begin
-  select id into v_r from personas where organizacion_id=v_org and ci='1000001';
+  select id into v_cand_t from candidatos where organizacion_id=v_org and nombre_publico='Venus Nuñez';
   insert into personas(organizacion_id, ci, nombres, apellidos)
     values (v_org,'4485876','Daniel','Britez') returning id into v_p;
 
-  insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_persona_id)
-    values (v_org, v_p, v_ele, 'activo', v_u, v_r);
+  insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_candidato_id)
+    values (v_org, v_p, v_ele, 'activo', v_u, v_cand_t);
 
   begin  -- el mismo CI otra vez, como en la planilla real (filas 32, 382 y 602)
-    insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_persona_id)
-      values (v_org, v_p, v_ele, 'activo', v_u, v_r);
+    insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_candidato_id)
+      values (v_org, v_p, v_ele, 'activo', v_u, v_cand_t);
   exception when unique_violation then ok := true;
   end;
   perform test_falla_si(not ok, 'El segundo chofer con el mismo CI es rechazado');
 
   -- pero sí puede participar en otra elección (antecedentes históricos)
-  insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_persona_id)
-    values (v_org, v_p, '00000000-0000-0000-0000-0000000000e1', 'activo', v_u, v_r);
+  insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_candidato_id)
+    values (v_org, v_p, '00000000-0000-0000-0000-0000000000e1', 'activo', v_u, v_cand_t);
   perform test_ok('El mismo CI sí puede participar en otra elección');
 end $$;
 
@@ -143,9 +143,9 @@ begin
     insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por)
       values (v_org, v_p, '00000000-0000-0000-0000-0000000000e2', 'activo',
               '00000000-0000-0000-0000-000000000501');
-  exception when not_null_violation then ok := true;
+  exception when check_violation then ok := true;
   end;
-  perform test_falla_si(not ok, 'Un chofer sin responsable declarado es rechazado');
+  perform test_falla_si(not ok, 'Un chofer sin responsable declarado es rechazado (ni supervisor ni concejal)');
 end $$;
 
 \echo '== 5. Una sola asignación vigente por chofer (D-17) =='
@@ -178,25 +178,25 @@ do $$
 declare
   v_org uuid := '00000000-0000-0000-0000-0000000000a1';
   v_ele uuid := '00000000-0000-0000-0000-0000000000e2';
-  v_c uuid; v_p uuid; v_ch uuid; v_r uuid;
+  v_c uuid; v_p uuid; v_ch uuid; v_cand_t uuid;
   v_u uuid := '00000000-0000-0000-0000-000000000501'; ok boolean := false; i int;
 begin
   select id into v_c from candidatos where nombre_publico='Venus Nuñez' and organizacion_id=v_org;
-  select id into v_r from personas where organizacion_id=v_org and ci='1000001';
+  v_cand_t := v_c;
 
   for i in 1..2 loop   -- el cupo es 2
     insert into personas(organizacion_id, ci, nombres) values (v_org, (3000000+i)::text, 'Cupo '||i)
       returning id into v_p;
-    insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_persona_id)
-      values (v_org, v_p, v_ele, 'activo', v_u, v_r) returning id into v_ch;
+    insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_candidato_id)
+      values (v_org, v_p, v_ele, 'activo', v_u, v_cand_t) returning id into v_ch;
     perform fn_consumir_cupo_cascada(v_ele, v_c, null, null, v_ch, null);
   end loop;
   perform test_ok('Se consumen los 2 lugares del cupo');
 
   insert into personas(organizacion_id, ci, nombres) values (v_org,'3000003','Cupo 3')
     returning id into v_p;
-  insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_persona_id)
-    values (v_org, v_p, v_ele, 'activo', v_u, v_r) returning id into v_ch;
+  insert into choferes(organizacion_id, persona_id, eleccion_id, estado, declarado_por, responsable_candidato_id)
+    values (v_org, v_p, v_ele, 'activo', v_u, v_cand_t) returning id into v_ch;
   begin
     perform fn_consumir_cupo_cascada(v_ele, v_c, null, null, v_ch, null);
   exception when check_violation then ok := true;

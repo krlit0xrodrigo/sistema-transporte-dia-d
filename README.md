@@ -2,9 +2,9 @@
 
 Villa Hayes, Presidente Hayes, Paraguay.
 
-> **Estado: SPRINT — Día 1 de 5.**
-> Base de datos escrita y probada: **45 tablas, 124 políticas RLS, 28 invariantes en verde.**
-> Las 21 decisiones resueltas.
+> **Estado: SPRINT — Día 2 de 5 cerrado.**
+> Base de datos: **45 tablas, 124 políticas RLS, 28 invariantes en verde.**
+> Datos reales cargados: **padrón de 35.192 · 604 choferes activos · 0 cédulas duplicadas.**
 >
 > 🗓️ **Sistema operativo: miércoles 16 de septiembre. Día D: domingo 4 de octubre.**
 > Ver [`ROADMAP.md`](ROADMAP.md).
@@ -16,7 +16,18 @@ Villa Hayes, Presidente Hayes, Paraguay.
 ```
 
 Levanta un PostgreSQL efímero, aplica las migraciones y el seed, y corre los invariantes
-críticos. Sin Supabase, sin Docker, sin red.
+críticos. Sin Supabase, sin Docker, sin red. Con `--no-tests` deja la base limpia para
+correr los importadores.
+
+## Cargar los datos
+
+```bash
+export DATABASE_URL=...   # ver docs/despliegue.md
+python3 scripts/import/padron.py padron_villa_hayes-utf8.csv
+python3 scripts/import/choferes.py "Logistica Dia D.xlsx"              # informe, sin escribir
+python3 scripts/import/choferes.py "Logistica Dia D.xlsx" --confirmar
+python3 scripts/import/antecedentes.py "Reporte_Choferes.xlsx" --confirmar
+```
 
 ## Qué es
 
@@ -44,6 +55,7 @@ Vercel · Cloudflare · Google Sheets API · Traccar API.
 | [`ROADMAP.md`](ROADMAP.md) | **Calendario de 21 días al 4 de octubre**, MVP y orden de recorte |
 | [`docs/audit-datos.md`](docs/audit-datos.md) | Auditoría de las planillas de origen |
 | [`docs/audit-padron.md`](docs/audit-padron.md) | Auditoría del padrón (35.192 registros) |
+| [`docs/despliegue.md`](docs/despliegue.md) | **Aplicar el esquema y cargar los datos** |
 | [`docs/architecture.md`](docs/architecture.md) | Arquitectura y decisiones (12 ADR) |
 | [`docs/database.md`](docs/database.md) | 45 tablas, relaciones, restricciones, RLS |
 | [`docs/permissions.md`](docs/permissions.md) | 9 roles y matriz de permisos |

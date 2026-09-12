@@ -154,8 +154,9 @@ begin
       using errcode = 'check_violation';
   end if;
 
-  -- RN-16: todo chofer tiene responsable declarado
-  if (p->>'responsable_persona_id') is null then
+  -- RN-16: todo chofer tiene responsable declarado (supervisor o concejal)
+  if nullif(p->>'responsable_supervisor_id','') is null
+     and nullif(p->>'responsable_candidato_id','') is null then
     raise exception 'RESPONSABLE_OBLIGATORIO: indicá el supervisor o concejal que responde por este chofer'
       using errcode = 'check_violation';
   end if;
@@ -220,11 +221,13 @@ begin
 
   -- Chofer
   insert into choferes(organizacion_id, persona_id, eleccion_id, estado_servicio, estado,
-                       origen_planilla_id, declarado_por, responsable_persona_id, created_by)
+                       origen_planilla_id, declarado_por,
+                       responsable_supervisor_id, responsable_candidato_id, created_by)
   values (v_org, v_persona, v_eleccion,
           coalesce((p->>'estado_servicio')::estado_servicio, 'pendiente'), 'activo',
           nullif(p->>'origen_planilla_id','')::uuid, auth.uid(),
-          (p->>'responsable_persona_id')::uuid, auth.uid())
+          nullif(p->>'responsable_supervisor_id','')::uuid,
+          nullif(p->>'responsable_candidato_id','')::uuid, auth.uid())
   returning id into v_chofer;
 
   -- Vehículo (opcional)
@@ -397,7 +400,8 @@ select ch.id                     as chofer_id,
        cand.nombre_publico       as candidato,
        b.nombre                  as barrio,
        s.alias                   as supervisor,
-       resp.nombre_completo      as responsable,
+       coalesce(rsup.alias, rcand.nombre_publico) as responsable,
+       case when rsup.id is not null then 'supervisor' else 'concejal' end as responsable_tipo,
        v.chapa, v.categoria,
        (select count(*) from apariciones_origen ao
          where ao.persona_id = p.id and ao.eleccion_id = ch.eleccion_id) as apariciones,
@@ -409,7 +413,8 @@ select ch.id                     as chofer_id,
        ad.km_recorridos
   from choferes ch
   join personas p        on p.id = ch.persona_id
-  join personas resp     on resp.id = ch.responsable_persona_id
+  left join supervisores rsup on rsup.id = ch.responsable_supervisor_id
+  left join candidatos  rcand on rcand.id = ch.responsable_candidato_id
   left join asignaciones a on a.chofer_id = ch.id and a.vigente_hasta is null
   left join candidatos   cand on cand.id = a.candidato_id
   left join barrios      b    on b.id = a.barrio_id

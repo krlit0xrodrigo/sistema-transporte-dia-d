@@ -13,7 +13,11 @@ PGPORT="${PGPORT:-54329}"
 PGDATA="${PGDATA:-/var/lib/postgresql/pgdata-test}"
 PGBIN="${PGBIN:-/usr/lib/postgresql/16/bin}"
 SOCK="${SOCK:-/tmp}"
-DB=diad_test
+# --no-tests deja la base con migraciones + seed y nada más. Se usa para
+# correr los importadores contra datos reales sin los datos del test.
+CORRER_TESTS=1
+[[ "${1:-}" == "--no-tests" ]] && CORRER_TESTS=0 && shift || true
+DB="${DB:-diad_test}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 psql_() { psql -h "$SOCK" -p "$PGPORT" -U postgres "$@"; }
@@ -54,10 +58,14 @@ done
 echo "→ seed"
 psql_ -d "$DB" -q -v ON_ERROR_STOP=1 -f "$ROOT/supabase/seed.sql"
 
-echo "→ invariantes"
-psql_ -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/supabase/tests/01_invariantes.sql" 2>&1 \
-  | grep -E "OK |FALL|^==|ERROR|PASARON" \
-  | sed 's/^psql:[^ ]* //; s/^NOTICE:  //'
+if [[ $CORRER_TESTS -eq 1 ]]; then
+  echo "→ invariantes"
+  psql_ -d "$DB" -v ON_ERROR_STOP=1 -f "$ROOT/supabase/tests/01_invariantes.sql" 2>&1 \
+    | grep -E "OK |FALL|^==|ERROR|PASARON" \
+    | sed 's/^psql:[^ ]* //; s/^NOTICE:  //'
+else
+  echo "→ invariantes omitidos (--no-tests): base limpia para importar"
+fi
 
 echo
 echo "→ resumen del esquema"

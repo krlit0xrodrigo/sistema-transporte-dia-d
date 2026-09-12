@@ -37,14 +37,19 @@ sobra.
 
 **Salida:** la base existe, con RLS activo, y cada rol entra y ve lo suyo.
 
-### Día 2 — domingo 13 · Datos adentro
+### Día 2 — domingo 13 · Datos adentro ✅ **HECHO**
 
-- Importador con staging, normalizadores de CI y teléfono, `alias_catalogo`.
-- **Padrón: 35.192 registros + participación.** 🔴 Requiere el CSV en UTF-8.
-- **Los 695 choferes:** 20 rechazados sin CI, 64 CI duplicados a resolver, apariciones archivadas.
-- Verificación contra padrón: 535 verificados, 70 `fuera_de_padron`.
+- ✅ Importadores con staging, normalizadores, resolución de catálogos y alias.
+- ✅ **Padrón en UTF-8:** 35.192 personas + 95.427 registros de participación, 7 locales,
+  0 cédulas duplicadas, 2.029 apellidos con Ñ recuperados.
+- ✅ **695 choferes procesados:** 20 rechazados sin cédula (D-18), **604 activos creados**,
+  70 apariciones archivadas (D-03), 400 vehículos, 22 supervisores.
+- ✅ Verificación contra padrón: 534 verificados, 70 `fuera_de_padron` (D-21), 1 discrepancia.
+- ✅ 590 antecedentes del 07/06/2026, marcados con confiabilidad baja.
+- ✅ **0 cédulas duplicadas activas.**
 
-**Salida:** la base tiene los datos reales, limpios y trazables.
+Corrido de punta a punta contra PostgreSQL 16 con los archivos reales.
+Números y comandos en `docs/despliegue.md`.
 
 ### Día 3 — lunes 14 · Operación
 

@@ -212,21 +212,29 @@ create table choferes (
   motivo_baja           text,
   origen_planilla_id    uuid,
   observaciones         text,
-  -- D-14 / RN-16: todo chofer tiene un responsable declarado
-  declarado_por         uuid not null references usuarios(id),
-  responsable_persona_id uuid not null references personas(id),
+  -- D-14 / RN-16: todo chofer tiene un responsable declarado.
+  -- El responsable es un supervisor o un concejal, NO una persona con CI:
+  -- las planillas traen a los 22 supervisores sólo por nombre o apodo
+  -- ('Jucecen'), sin cédula. Exigir una persona acá bloquearía el import
+  -- entero por un dato que nadie tiene.
+  declarado_por             uuid not null references usuarios(id),
+  responsable_supervisor_id uuid references supervisores(id),
+  responsable_candidato_id  uuid references candidatos(id),
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now(),
   deleted_at            timestamptz,
   created_by            uuid references usuarios(id),
-  updated_by            uuid references usuarios(id)
+  updated_by            uuid references usuarios(id),
+  constraint ck_responsable_declarado
+    check (responsable_supervisor_id is not null or responsable_candidato_id is not null)
 );
 -- La restricción que hace imposible repetir los 64 CI duplicados:
 create unique index ux_chofer_persona_eleccion
   on choferes(persona_id, eleccion_id)
   where deleted_at is null and estado <> 'baja';
 create index ix_choferes_eleccion on choferes(organizacion_id, eleccion_id, estado);
-create index ix_choferes_responsable on choferes(responsable_persona_id);
+create index ix_choferes_resp_sup  on choferes(responsable_supervisor_id);
+create index ix_choferes_resp_cand on choferes(responsable_candidato_id);
 
 create table chofer_vehiculos (
   id          uuid primary key default gen_random_uuid(),
