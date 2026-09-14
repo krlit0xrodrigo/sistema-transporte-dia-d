@@ -8,7 +8,7 @@ import {
   altaChoferSchema,
   type AltaChoferInput,
 } from "@/lib/schemas/alta-chofer";
-import { altaChofer, type AltaResult } from "./actions";
+import { altaChofer, solicitarExcepcion, type AltaResult } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +55,7 @@ export function FormAlta({
 }: FormAltaProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [excepcionSolicitada, setExcepcionSolicitada] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const {
@@ -106,11 +107,44 @@ export function FormAlta({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {serverError && (
+      {serverError && !excepcionSolicitada && (
         <Aviso tono="error">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{serverError}</span>
+            </div>
+            
+            {(serverError.includes("lista negra") || serverError.includes("agotado")) && (
+              <div className="mt-2 rounded-md bg-white/50 p-3">
+                <p className="text-sm font-medium mb-2 text-slate-800">Solicitar excepción</p>
+                <form action={async (fd) => {
+                  startTransition(async () => {
+                    const res = await solicitarExcepcion(fd);
+                    if (res.ok) {
+                      setExcepcionSolicitada(true);
+                      setServerError(null);
+                    } else {
+                      setServerError(res.error || "Error al solicitar excepción");
+                    }
+                  });
+                }} className="flex gap-2">
+                  <input type="hidden" name="ci" value={ci} />
+                  <input type="hidden" name="tipo_excepcion" value={serverError.includes("lista negra") ? "lista_negra" : "cupo"} />
+                  <Input name="motivo_excepcion" placeholder="Justificación de la excepción..." required className="h-8 text-xs bg-white" />
+                  <Button type="submit" size="sm" className="h-8 text-xs whitespace-nowrap">Solicitar</Button>
+                </form>
+              </div>
+            )}
+          </div>
+        </Aviso>
+      )}
+
+      {excepcionSolicitada && (
+        <Aviso tono="ok">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{serverError}</span>
+            <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>Excepción solicitada exitosamente. Debes esperar a que un aprobador la revise.</span>
           </div>
         </Aviso>
       )}

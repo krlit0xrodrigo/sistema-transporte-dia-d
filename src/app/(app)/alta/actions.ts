@@ -70,3 +70,35 @@ export async function altaChofer(formData: FormData): Promise<AltaResult> {
   const resultado = data as { chofer_id: string };
   redirect(`/choferes/${resultado.chofer_id}`);
 }
+
+export async function solicitarExcepcion(formData: FormData) {
+  const supabase = await crearClienteServidor();
+  const rawCi = String(formData.get("ci") ?? "").replace(/[^0-9]/g, "").replace(/^0+/, "");
+  const motivo = String(formData.get("motivo_excepcion") ?? "").trim();
+  const tipo = String(formData.get("tipo_excepcion") ?? "lista_negra");
+
+  if (!rawCi || !motivo) return { ok: false, error: "Datos incompletos para solicitar excepción." };
+
+  const userRes = await supabase.auth.getUser();
+  if (!userRes.data.user) return { ok: false, error: "No autorizado." };
+
+  // Obtener eleccion_id y persona_id
+  const { data: eleccion } = await supabase.from("elecciones").select("id, organizacion_id").eq("estado", "activa").maybeSingle();
+  if (!eleccion) return { ok: false, error: "No hay elección activa." };
+
+  let personaId = null;
+  const { data: persona } = await supabase.from("personas").select("id").eq("ci", rawCi).maybeSingle();
+  if (persona) personaId = persona.id;
+
+  const { error } = await supabase.from("excepciones").insert({
+    organizacion_id: eleccion.organizacion_id,
+    eleccion_id: eleccion.id,
+    persona_id: personaId,
+    tipo: tipo as any,
+    motivo: motivo,
+    solicitado_por: userRes.data.user.id,
+  });
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}

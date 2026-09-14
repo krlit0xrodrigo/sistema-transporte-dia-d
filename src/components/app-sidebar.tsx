@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Gauge,
   ShieldAlert,
+  ShieldCheck,
   History,
   BarChart3,
   MapPin,
@@ -81,6 +82,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/cupos", label: "Cupos", icon: Gauge, permiso: "cupos.ver" },
       { href: "/lista-negra", label: "Lista negra", icon: ShieldAlert, permiso: "lista_negra.ver" },
+      { href: "/excepciones", label: "Excepciones", icon: ShieldCheck, permiso: "excepciones.ver" },
       { href: "/antecedentes", label: "Antecedentes", icon: History, permiso: null },
       { href: "/reportes", label: "Reportes", icon: BarChart3, permiso: "reportes.ver" },
       { href: "/gps", label: "GPS", icon: MapPin, permiso: "gps.ver" },
