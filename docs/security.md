@@ -61,7 +61,13 @@ es un problema para las personas que figuran en la base.
 
 ### Cloudflare
 - WAF con reglas OWASP.
-- Rate limiting: login (5/min/IP), búsqueda por CI (30/min/usuario), exportaciones (5/hora/usuario).
+- Rate limiting: login (5/min/IP), búsqueda por CI (30/min/usuario), exportaciones
+  (60/hora/usuario como tope grueso).
+  > El valor original de este documento era 5/hora. Estaba mal: la unidad de reparto en el
+  > terreno es el barrio, así que un coordinador imprime una planilla por barrio de una
+  > sentada y con 5/hora no llega a la cuarta. El control fino vive en la aplicación
+  > (20 cada 10 minutos, contados sobre la tabla `exportaciones`); Cloudflare queda como
+  > backstop contra un raspado automatizado, no como la regla de uso.
 - Bot management y challenge en `/login`.
 - Restricción geográfica de rutas administrativas (a evaluar — el equipo puede viajar).
 - Registro de solicitudes conservado para el período del operativo.

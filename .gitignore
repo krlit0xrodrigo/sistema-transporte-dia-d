@@ -12,14 +12,10 @@ node_modules/
 *.xlsx
 *.csv
 !.env.example
-
-# Python
-__pycache__/
+node_modules/
+.next/
 *.pyc
-
-# Supabase CLI temporales
-supabase/.temp/
-supabase/supabase/
-
-# Auditorias generadas localmente
-audit-*.txt
+__pycache__/
+tsconfig.tsbuildinfo
+.env.local
+.vercel

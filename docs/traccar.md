@@ -81,6 +81,31 @@ pendiente_alta ──▶ activo ──┬──▶ inactivo ──▶ activo
 Los campos `ABM Traccar` (529 SI / 22 NO) y `Activado en Traccar` (1 solo valor) de la planilla
 actual se reemplazan por este estado, que es derivado y verificable, no declarado a mano.
 
+### 4.1 La pantalla `/gps` (día 5)
+
+El paso 3 está implementado. La pantalla pide **cédula + ID de Traccar** (o `uniqueId`), y:
+
+1. Normaliza la cédula con `fn_normalizar_ci` — la misma función que usó el importador, así
+   que "4.349.952" y "4349952" son la misma persona.
+2. Busca la persona por esa cédula y su participación **activa** como chofer en la elección.
+3. Escribe la FK. El nombre del equipo en Traccar se guarda sólo como referencia y **no**
+   participa del vínculo.
+
+Tres índices sostienen la regla y están probados en `supabase/tests/03_exportacion.sql`:
+
+| Índice | Qué impide |
+|---|---|
+| `ux_disp_chofer` | Dos equipos activos para el mismo chofer |
+| `ux_disp_traccar` | El mismo `deviceId` vinculado a dos choferes |
+| `ux_disp_unique` | El mismo `uniqueId` registrado dos veces |
+
+Dar de baja un equipo libera al chofer para un reemplazo — el índice es parcial
+(`where estado <> 'baja'`), así que el historial de equipos queda entero.
+
+Los pasos 2 y 4 (sincronización e ingesta) son el job server-side del período de
+endurecimiento. `traccar_eventos` tiene `with check (false)` para `authenticated`: ni un admin
+puede insertar un evento desde la pantalla, sólo el job con `service_role`.
+
 ## 5. Criterio de actividad — explícito y versionado
 
 El campo `actividad_diaria.criterio_version` existe porque "activo" es una definición de negocio

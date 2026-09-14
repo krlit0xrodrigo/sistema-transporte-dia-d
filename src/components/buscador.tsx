@@ -6,11 +6,15 @@ import {
   DEBOUNCE_MS, MIN_CARACTERES, normalizarCI, pareceCI,
   type Ambito, type Coincidencia, type Modo,
 } from "@/lib/busqueda";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Search, Loader2 } from "lucide-react";
 
 /**
  * Buscador con autocompletado.
  *
- * Tres cosas que lo hacen rápido y que antes no estaban:
+ * Tres cosas que lo hacen rápido:
  *
  * 1. **Debounce de 300 ms.** Escribir «4361034» son siete pulsaciones;
  *    antes eran siete consultas. Ahora es una.
@@ -32,9 +36,16 @@ interface Props {
   /** Texto del campo vacío. */
   marcador?: string;
   autoFocus?: boolean;
+  /** Ruta destino al seleccionar. Default: /choferes/:id */
+  destino?: "choferes" | "consulta";
 }
 
-export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
+export function Buscador({
+  ambito = "todos",
+  marcador,
+  autoFocus,
+  destino = "choferes",
+}: Props) {
   const router = useRouter();
   const idLista = useId();
 
@@ -100,10 +111,14 @@ export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
   }, []);
 
   function abrir(c: Coincidencia) {
-    const chofer = c.chofer_actual_id ?? c.chofer_historico_id;
-    router.push(chofer
-      ? `/choferes/${chofer}`
-      : `/choferes/nuevo?ci=${encodeURIComponent(c.ci)}`);
+    if (destino === "consulta") {
+      router.push(`/consulta/${encodeURIComponent(c.ci)}`);
+    } else {
+      const chofer = c.chofer_actual_id ?? c.chofer_historico_id;
+      router.push(chofer
+        ? `/choferes/${chofer}`
+        : `/choferes/nuevo?ci=${encodeURIComponent(c.ci)}`);
+    }
     setAbierto(false);
   }
 
@@ -130,7 +145,8 @@ export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
     <div ref={contenedor} className="relative">
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
-          <input
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
             type="text"
             role="combobox"
             aria-expanded={abierto}
@@ -144,28 +160,30 @@ export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
             onKeyDown={teclas}
             onFocus={() => coincidencias.length > 0 && setAbierto(true)}
             placeholder={marcador ?? "Cédula, nombre o apellido — por ejemplo 4.361.034"}
-            className="block w-full rounded-lg border-0 bg-white py-2.5 pl-3 pr-10 text-sm text-tinta shadow-sm ring-1 ring-inset ring-borde placeholder:text-tinta-tenue focus:ring-2 focus:ring-inset focus:ring-rojo"
+            className="pl-10 pr-10"
           />
           {cargando && (
-            <span aria-hidden="true"
-                  className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-zinc-200 border-t-rojo" />
+            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />
           )}
         </div>
 
-        <select value={modo} onChange={(e) => setModo(e.target.value as Modo)}
-                aria-label="Campo de búsqueda"
-                className="rounded-lg border-0 bg-white px-3 py-2.5 text-sm text-tinta shadow-sm ring-1 ring-inset ring-borde focus:ring-2 focus:ring-inset focus:ring-rojo sm:w-40">
+        <select
+          value={modo}
+          onChange={(e) => setModo(e.target.value as Modo)}
+          aria-label="Campo de búsqueda"
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:w-40"
+        >
           {(Object.keys(ETIQUETA_MODO) as Modo[]).map((m) => (
             <option key={m} value={m}>{ETIQUETA_MODO[m]}</option>
           ))}
         </select>
       </div>
 
-      <p className="mt-2 text-xs text-tinta-tenue" aria-live="polite">
+      <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
         {termino.length === 0 ? (
           <>La cédula se busca con puntos o sin puntos. El nombre y el apellido, exactos.</>
         ) : modoEfectivo === "ci" ? (
-          <>Buscando cédulas que empiezan con <strong className="tabular-nums text-tinta">{normalizarCI(termino) || "—"}</strong></>
+          <>Buscando cédulas que empiezan con <strong className="tabular-nums text-foreground">{normalizarCI(termino) || "—"}</strong></>
         ) : (
           <>
             Coincidencia {parcial ? "parcial" : "exacta"} de {modoEfectivo === "apellido" ? "apellido" : "nombre"}
@@ -176,7 +194,7 @@ export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
 
       {/* La búsqueda parcial existe, pero se enciende a mano. */}
       {buscado && coincidencias.length === 0 && !parcial && sugerencia !== null && sugerencia > 0 && (
-        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div className="mt-2 rounded-lg border border-warning/30 bg-warning-50 px-3 py-2 text-xs text-warning">
           Ninguna coincidencia exacta.{" "}
           <button type="button" onClick={() => setParcial(true)}
                   className="font-semibold underline underline-offset-2">
@@ -185,10 +203,10 @@ export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
         </div>
       )}
       {parcial && (
-        <div className="mt-2 text-xs text-tinta-tenue">
+        <div className="mt-2 text-xs text-muted-foreground">
           Coincidencia parcial activa.{" "}
           <button type="button" onClick={() => setParcial(false)}
-                  className="font-medium text-rojo-700 underline underline-offset-2">
+                  className="font-medium text-primary underline underline-offset-2">
             Volver a exacta
           </button>
         </div>
@@ -196,19 +214,22 @@ export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
 
       {abierto && coincidencias.length > 0 && (
         <ul id={idLista} role="listbox"
-            className="absolute z-20 mt-2 max-h-96 w-full overflow-auto rounded-xl border border-borde bg-white py-1 shadow-elevada">
+            className="absolute z-50 mt-2 max-h-96 w-full overflow-auto rounded-xl border bg-popover py-1 shadow-lg">
           {coincidencias.map((c, i) => (
             <li key={c.persona_id} role="option" aria-selected={i === resaltado}>
               <button type="button"
                 onMouseEnter={() => setResaltado(i)}
                 onClick={() => abrir(c)}
-                className={`flex w-full items-center gap-3 px-3 py-2.5 text-left ${i === resaltado ? "bg-rojo-50" : ""}`}>
-                <span className="w-24 shrink-0 text-sm font-semibold tabular-nums text-tinta">
+                className={cn(
+                  "flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors",
+                  i === resaltado ? "bg-accent" : "hover:bg-accent/50",
+                )}>
+                <span className="w-24 shrink-0 text-sm font-semibold tabular-nums">
                   {formatearCI(c.ci)}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-tinta">{c.nombre_completo}</span>
-                  <span className="block truncate text-xs text-tinta-tenue">
+                  <span className="block truncate text-sm">{c.nombre_completo}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
                     {c.barrio ?? "Sin barrio"}{c.candidato ? ` · ${c.candidato}` : ""}
                   </span>
                 </span>
@@ -220,11 +241,11 @@ export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
       )}
 
       {abierto && buscado && coincidencias.length === 0 && sugerencia === null && (
-        <div className="absolute z-20 mt-2 w-full rounded-xl border border-borde bg-white px-4 py-5 text-center shadow-elevada">
-          <p className="text-sm text-tinta">Ninguna coincidencia.</p>
+        <div className="absolute z-50 mt-2 w-full rounded-xl border bg-popover px-4 py-5 text-center shadow-lg">
+          <p className="text-sm">Ninguna coincidencia.</p>
           {modoEfectivo === "ci" && normalizarCI(termino).length >= 5 && (
             <a href={`/choferes/nuevo?ci=${encodeURIComponent(normalizarCI(termino))}`}
-               className="mt-2 inline-block text-sm font-medium text-rojo-700 underline underline-offset-4">
+               className="mt-2 inline-block text-sm font-medium text-primary underline underline-offset-4">
               Dar de alta la cédula {normalizarCI(termino)}
             </a>
           )}
@@ -236,12 +257,12 @@ export function Buscador({ ambito = "todos", marcador, autoFocus }: Props) {
 
 function Etiqueta({ c }: { c: Coincidencia }) {
   if (c.chofer_actual_id) {
-    return <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 ring-1 ring-inset ring-emerald-200">Operativo</span>;
+    return <Badge variant="success" className="shrink-0">Operativo</Badge>;
   }
   if (c.chofer_historico_id) {
-    return <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-tinta-suave ring-1 ring-inset ring-zinc-200">Histórico</span>;
+    return <Badge variant="secondary" className="shrink-0">Histórico</Badge>;
   }
-  return <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-800 ring-1 ring-inset ring-sky-200">Sin alta</span>;
+  return <Badge variant="info" className="shrink-0">Sin alta</Badge>;
 }
 
 function formatearCI(ci: string): string {

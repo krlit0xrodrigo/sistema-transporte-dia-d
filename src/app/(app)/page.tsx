@@ -1,23 +1,57 @@
 import Link from "next/link";
 import { crearClienteServidor } from "@/lib/supabase/server";
-import { Badge, Card, CardHeader, Vacio } from "@/components/ui";
-import type { CupoConsumo } from "@/types/database";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PageHeader, Vacio } from "@/components/shared";
+import { Users, CheckCircle, AlertTriangle, Gauge } from "lucide-react";
+import type { Metadata } from "next";
 
-function Tarjeta({ valor, etiqueta, detalle }: { valor: number | string; etiqueta: string; detalle?: string }) {
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
+
+interface CupoConsumo {
+  id: string;
+  etiqueta: string;
+  ambito: string;
+  limite: number;
+  usado: number;
+  porcentaje: number;
+}
+
+function StatCard({
+  valor,
+  etiqueta,
+  detalle,
+  icon: Icon,
+}: {
+  valor: number | string;
+  etiqueta: string;
+  detalle?: string;
+  icon: React.ElementType;
+}) {
   return (
-    <Card className="p-4">
-      <p className="text-2xl font-semibold tabular-nums">{valor}</p>
-      <p className="text-sm text-slate-600">{etiqueta}</p>
-      {detalle && <p className="mt-1 text-xs text-slate-400">{detalle}</p>}
+    <Card>
+      <CardContent className="flex items-center gap-4 p-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-2xl font-semibold tabular-nums">{valor}</p>
+          <p className="text-sm text-muted-foreground">{etiqueta}</p>
+          {detalle && <p className="mt-0.5 text-xs text-muted-foreground">{detalle}</p>}
+        </div>
+      </CardContent>
     </Card>
   );
 }
 
-/** Verde < 80 % · amarillo 80–99 % · rojo al 100 % (docs/workflows.md §5). */
+/** Verde < 80 % · amarillo 80–99 % · rojo al 100 % (docs/workflows.md §7). */
 function semaforo(pct: number) {
-  if (pct >= 100) return { tono: "error" as const, texto: "Agotado" };
-  if (pct >= 80) return { tono: "alerta" as const, texto: "Al límite" };
-  return { tono: "ok" as const, texto: "Disponible" };
+  if (pct >= 100) return { variant: "danger" as const, texto: "Agotado" };
+  if (pct >= 80) return { variant: "warning" as const, texto: "Al límite" };
+  return { variant: "success" as const, texto: "Disponible" };
 }
 
 export default async function Tablero() {
@@ -35,46 +69,75 @@ export default async function Tablero() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Tablero</h1>
-        <p className="text-sm text-slate-500">Día D — Municipales Villa Hayes · 4 de octubre de 2026</p>
-      </div>
+      <PageHeader descripcion="Día D — Municipales Villa Hayes · 4 de octubre de 2026">
+        Dashboard
+      </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Tarjeta valor={choferes ?? 0} etiqueta="Choferes activos" />
-        <Tarjeta valor={verificados ?? 0} etiqueta="Verificados en el padrón" />
-        <Tarjeta valor={conflictos ?? 0} etiqueta="Filas en conflicto"
-                 detalle="Esperan resolución humana" />
+        <StatCard
+          valor={choferes ?? 0}
+          etiqueta="Choferes activos"
+          icon={Users}
+        />
+        <StatCard
+          valor={verificados ?? 0}
+          etiqueta="Verificados en el padrón"
+          icon={CheckCircle}
+        />
+        <StatCard
+          valor={conflictos ?? 0}
+          etiqueta="Filas en conflicto"
+          detalle="Esperan resolución humana"
+          icon={AlertTriangle}
+        />
       </div>
 
       <Card>
-        <CardHeader titulo="Cupos" extra={<Link href="/cupos" className="text-xs text-slate-500 underline">Gestionar</Link>} />
-        {lista.length === 0 ? (
-          <Vacio mensaje="Todavía no hay cupos definidos. Sin cupo, ningún ámbito restringe el alta." />
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {lista.slice(0, 12).map((c) => {
-              const pct = Number(c.porcentaje);
-              const s = semaforo(pct);
-              return (
-                <li key={c.id} className="flex items-center gap-4 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{c.etiqueta}</p>
-                    <p className="text-xs text-slate-500">{c.ambito}</p>
-                  </div>
-                  <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-100">
-                    <div className={`h-full ${pct >= 100 ? "bg-rose-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500"}`}
-                         style={{ width: `${Math.min(pct, 100)}%` }} />
-                  </div>
-                  <span className="w-24 text-right text-sm tabular-nums text-slate-600">
-                    {c.usado} / {c.limite}
-                  </span>
-                  <Badge tono={s.tono}>{s.texto}</Badge>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Gauge className="h-4 w-4 text-muted-foreground" />
+            Cupos
+          </CardTitle>
+          <Button variant="link" size="sm" asChild>
+            <Link href="/cupos">Gestionar</Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {lista.length === 0 ? (
+            <Vacio mensaje="Todavía no hay cupos definidos. Sin cupo, ningún ámbito restringe el alta." />
+          ) : (
+            <ul className="divide-y">
+              {lista.slice(0, 12).map((c) => {
+                const pct = Number(c.porcentaje);
+                const s = semaforo(pct);
+                return (
+                  <li key={c.id} className="flex items-center gap-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{c.etiqueta}</p>
+                      <p className="text-xs text-muted-foreground">{c.ambito}</p>
+                    </div>
+                    <div className="h-2 w-32 overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className={`h-full transition-all ${
+                          pct >= 100
+                            ? "bg-danger"
+                            : pct >= 80
+                              ? "bg-warning"
+                              : "bg-success"
+                        }`}
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                    <span className="w-24 text-right text-sm tabular-nums text-muted-foreground">
+                      {c.usado} / {c.limite}
+                    </span>
+                    <Badge variant={s.variant}>{s.texto}</Badge>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

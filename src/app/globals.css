@@ -2,38 +2,168 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --rojo: #c00000;
-  --tinta: #333333;
-  --lienzo: #f5f5f6;
+/*
+ * Sistema de tokens para shadcn/ui + identidad visual del operativo.
+ *
+ * El rojo Colorado (#C00000) es de la marca, no del fondo. Se usa para lo que
+ * el operador tiene que encontrar rápido —la acción principal, la pestaña
+ * activa, el dato que urge— y para nada más. Una pantalla roja entera cansa
+ * en la segunda hora y esta gente la va a mirar doce horas seguidas el 4 de
+ * octubre.
+ */
+
+@layer base {
+  :root {
+    /* ─── Fondo y superficie ─── */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+
+    /* ─── Rojo Colorado — color primario ─── */
+    --primary: 0 100% 38%;
+    --primary-foreground: 0 0% 100%;
+
+    /* ─── Secundarios (gris institucional) ─── */
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 0 0% 20%;
+
+    --muted: 240 5% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 20%;
+
+    /* ─── Destructivo (para errores, no para acciones operativas) ─── */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* ─── Bordes y anillos ─── */
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 0 100% 38%;
+
+    /* ─── Radius ─── */
+    --radius: 0.5rem;
+
+    /* ─── Sidebar ─── */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 0 100% 38%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 0 100% 38%;
+
+    /* ─── Chart colors ─── */
+    --chart-1: 0 100% 38%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 221 83% 53%;
+    --chart-5: 270 76% 53%;
+
+    /* ─── Tokens del operativo (legacy, usados en componentes existentes) ─── */
+    --rojo: #C00000;
+    --tinta: #333333;
+    --lienzo: #f5f5f6;
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 95%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 0 100% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 240 4% 16%;
+    --muted-foreground: 0 0% 64%;
+
+    --accent: 240 4% 16%;
+    --accent-foreground: 0 0% 95%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 95%;
+
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 0 100% 45%;
+
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 0 100% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 0 100% 45%;
+
+    --chart-1: 0 100% 45%;
+    --chart-2: 142 76% 42%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 221 83% 58%;
+    --chart-5: 270 76% 58%;
+  }
 }
 
-html {
-  -webkit-text-size-adjust: 100%;
-  /* El operativo se maneja mucho desde el celular: que nada quede pegado
-     al borde de la pantalla ni se desborde a lo ancho. */
-  overflow-x: hidden;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Foco visible con color de la marca. Se toca con guantes y con teclado;
+     un foco invisible en una pantalla de carga es un error caro. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+    border-radius: 2px;
+  }
 }
 
-body {
-  background-color: var(--lienzo);
-  color: var(--tinta);
+@layer utilities {
+  /* Números alineados en columnas: cédulas, montos, números de orden. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }
-
-/* Foco visible y con el color de la marca. Se toca con guantes y con el
-   teclado; un foco invisible en una pantalla de carga es un error caro. */
-:where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--rojo);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-/* Números alineados en columnas: cédulas, montos, números de orden. */
-.tabular-nums { font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Impresión: ocultar navegación y sidebar */
+@media print {
+  nav, aside, header, footer, [data-sidebar], [data-no-print] {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
   }
 }

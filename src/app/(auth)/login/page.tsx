@@ -1,7 +1,14 @@
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/server";
-import { Aviso, Boton, Campo, claseInput } from "@/components/ui";
-import { AficheCandidato, LogoAnr, LogoMbarete } from "@/components/marca";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Aviso } from "@/components/shared";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Iniciar sesión",
+};
 
 export default async function Login({
   searchParams,
@@ -23,48 +30,93 @@ export default async function Login({
 
   return (
     <main className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_28rem]">
-      {/* El afiche sólo en pantallas anchas: en un celular robaría la
-          pantalla al formulario, que es a lo que se viene. */}
-      <div className="relative hidden overflow-hidden bg-rojo lg:block">
-        <AficheCandidato className="h-full w-full object-cover object-top" />
+      {/* Panel izquierdo — solo en desktop */}
+      <div className="relative hidden overflow-hidden bg-primary lg:block">
+        <div className="flex h-full flex-col items-center justify-center p-12">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+            <span className="text-4xl font-bold text-white">D</span>
+          </div>
+          <h2 className="mt-6 text-center text-2xl font-bold text-white">
+            Logística Día D
+          </h2>
+          <p className="mt-2 text-center text-sm text-white/80">
+            Sistema de Gestión de Transporte
+          </p>
+          <p className="mt-1 text-center text-sm text-white/60">
+            Villa Hayes · Presidente Hayes
+          </p>
+          <div className="mt-8 h-1 w-16 rounded-full bg-white/30" />
+          <p className="mt-8 text-center text-xs text-white/50">
+            Domingo 4 de octubre de 2026
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-col justify-center bg-white px-6 py-10 sm:px-10">
+      {/* Formulario de login */}
+      <div className="flex flex-col justify-center bg-background px-6 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-sm">
-          <LogoMbarete className="h-12 w-auto" />
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <span className="text-lg font-bold">D</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Logística Día D
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Villa Hayes · 4 de octubre de 2026
+              </p>
+            </div>
+          </div>
 
-          <h1 className="mt-7 text-2xl font-semibold tracking-tight text-tinta">
-            Logística Día D
-          </h1>
-          <p className="mt-1.5 text-sm text-tinta-suave">
-            Villa Hayes · domingo 4 de octubre de 2026
-          </p>
-          <div className="mt-4 h-1 w-14 rounded bg-rojo" />
+          <div className="mt-4 h-1 w-14 rounded bg-primary" />
 
           <form action={entrar} className="mt-8 space-y-5">
             <input type="hidden" name="volver" value={sp.volver ?? "/"} />
-            <Campo etiqueta="Correo" nombre="email" requerido>
-              <input id="email" name="email" type="email" required autoComplete="email"
-                     inputMode="email" autoFocus className={claseInput} />
-            </Campo>
-            <Campo etiqueta="Contraseña" nombre="password" requerido>
-              <input id="password" name="password" type="password" required
-                     autoComplete="current-password" className={claseInput} />
-            </Campo>
 
-            {sp.error && <Aviso tono="error">Correo o contraseña incorrectos.</Aviso>}
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                Correo <span className="text-destructive" aria-hidden="true">*</span>
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                inputMode="email"
+                autoFocus
+                placeholder="usuario@ejemplo.com"
+              />
+            </div>
 
-            <Boton type="submit" className="w-full">Entrar</Boton>
+            <div className="space-y-2">
+              <Label htmlFor="password">
+                Contraseña <span className="text-destructive" aria-hidden="true">*</span>
+              </Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {sp.error && (
+              <Aviso tono="error">Correo o contraseña incorrectos.</Aviso>
+            )}
+
+            <Button type="submit" className="w-full">
+              Entrar
+            </Button>
           </form>
 
-          <p className="mt-8 text-xs leading-relaxed text-tinta-tenue">
+          <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
             Sistema interno del operativo. Maneja datos personales de personas reales:
             todo acceso y toda exportación quedan registrados con tu usuario.
           </p>
-
-          <div className="mt-8 border-t border-borde pt-6">
-            <LogoAnr className="h-7 w-auto" />
-          </div>
         </div>
       </div>
     </main>

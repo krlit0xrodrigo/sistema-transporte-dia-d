@@ -1,0 +1,17 @@
+feat(ui): identidad visual, búsqueda nueva y separación histórico/operativo
+
+- Separa las 599 participaciones de la interna 07/06 del operativo del 04/10
+  (migración 0007, con guardas de caja y cupo, y rollback documentado)
+- Búsqueda: CI normalizada con y sin puntos, autocompletado server-side con
+  debounce y cancelación, nombre y apellido exactos, parcial explícita
+- /choferes ya no carga nada hasta que se busca
+- Identidad Partido Colorado, logos Mbareté y ANR, afiche en el login
+- ABM de usuarios y rol consulta verificado como solo lectura en RLS
+- Folios pasan a Órdenes de transporte en la interfaz
+- Arregla 3 huecos de permisos: admin.roles sin asignar, consulta sin
+  personas.ver, y sin DELETE sobre usuario_roles no se podía quitar un rol
+- Repara la doble codificación de los catálogos del seed (migración 0010)
+- 109 invariantes en verde (2 suites nuevas)
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SXyFjGvk1hSSBZ6r6JqNiz
