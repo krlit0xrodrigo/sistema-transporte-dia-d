@@ -23,6 +23,7 @@ import {
   UserCog,
   ScrollText,
   Settings,
+  FileDigit,
   Menu,
   ChevronLeft,
   LogOut,
@@ -74,7 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/choferes", label: "Choferes", icon: Users, permiso: "choferes.ver" },
       { href: "/alta", label: "Alta de chofer", icon: UserPlus, permiso: "choferes.crear" },
       { href: "/asignaciones", label: "Asignaciones", icon: ArrowRightLeft, permiso: "asignaciones.ver" },
-      { href: "/ordenes", label: "Órdenes", icon: ClipboardList, permiso: "folios.ver" },
+      { href: "/ordenes", label: "Órdenes de Trabajo", icon: ClipboardList, permiso: "folios.ver" },
     ],
   },
   {
@@ -95,6 +96,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/combustible", label: "Combustible", icon: Fuel, permiso: "caja.ver" },
       { href: "/anticipos", label: "Anticipos", icon: Banknote, permiso: "caja.ver" },
       { href: "/pagos", label: "Pagos", icon: CreditCard, permiso: "caja.ver" },
+      { href: "/caja/folios", label: "Folios", icon: FileDigit, permiso: "folios.ver" },
     ],
   },
   {

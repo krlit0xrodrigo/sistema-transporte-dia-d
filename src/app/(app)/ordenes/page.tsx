@@ -1,140 +1,79 @@
-import { crearClienteServidor } from "@/lib/supabase/server";
-import { Badge, Boton, Campo, Card, CardHeader, Vacio, claseInput } from "@/components/ui";
-import { anularFolio, crearSerie } from "@/lib/acciones";
+"use client";
 
-const TIPOS = [
-  ["contrato", "Contrato"],
-  ["vale_combustible", "Vale de combustible"],
-  ["anticipo", "Anticipo"],
-  ["pago_final", "Pago final"],
-] as const;
-const ETIQUETA = Object.fromEntries(TIPOS) as Record<string, string>;
+import { useState, useTransition } from "react";
+import { Boton, Card, CardHeader } from "@/components/ui";
+import { PageHeader, Aviso } from "@/components/shared";
+import { asignarOrdenesMasivo } from "./actions";
+import { AlertTriangle, CheckCircle, Printer, Loader2 } from "lucide-react";
+import Link from "next/link";
 
-interface Serie {
-  id: string; tipo_documento: string; prefijo: string; desde: number; hasta: number;
-  estado: string; total: number; disponibles: number; usados: number; anulados: number;
-}
+export default function OrdenesPage() {
+  const [isPending, startTransition] = useTransition();
+  const [resultado, setResultado] = useState<{ ok: boolean; msg: string; asignados?: number } | null>(null);
 
-export default async function Ordenes() {
-  const supabase = await crearClienteServidor();
-  const { data, error } = await supabase
-    .from("v_folios_series").select("*").order("tipo_documento").order("desde");
-  const series = (data ?? []) as Serie[];
-
-  const { data: anulables } = await supabase
-    .from("folios").select("id, numero, serie_id").eq("estado", "disponible")
-    .order("numero").limit(200);
+  const handleAsignar = () => {
+    startTransition(async () => {
+      setResultado(null);
+      const res = await asignarOrdenesMasivo();
+      if (res.ok) {
+        setResultado({ ok: true, msg: "Órdenes generadas exitosamente.", asignados: res.asignados });
+      } else {
+        setResultado({ ok: false, msg: res.error || "Ocurrió un error al asignar las órdenes." });
+      }
+    });
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Órdenes de transporte</h1>
-        <p className="text-sm text-slate-500">
-          Cada chofer recibe un número de orden. Un número se usa una sola vez y no se reutiliza: la asignación toma el
-          siguiente disponible con bloqueo, así que dos personas emitiendo a la vez nunca
-          reciben el mismo número.
-        </p>
-      </div>
+      <PageHeader descripcion="Gestión de números de orden y emisión de planillas para firmas.">
+        Órdenes de Trabajo y Planillas
+      </PageHeader>
 
-      {error && (
-        <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-          {error.message.includes("permission") || error.message.includes("policy")
-            ? "Tu usuario no tiene permiso para ver las órdenes."
-            : error.message}
-        </div>
+      {resultado && (
+        <Aviso tono={resultado.ok ? "ok" : "error"}>
+          <div className="flex items-start gap-2">
+            {resultado.ok ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />}
+            <span>
+              {resultado.msg}{" "}
+              {resultado.asignados !== undefined && `Se asignaron ${resultado.asignados} nuevas órdenes.`}
+            </span>
+          </div>
+        </Aviso>
       )}
 
-      <Card>
-        <CardHeader titulo="Emitir un talonario" />
-        <form action={crearSerie as (fd: FormData) => void} className="grid gap-4 p-4 sm:grid-cols-5">
-          <Campo etiqueta="Tipo" nombre="tipo" requerido>
-            <select id="tipo" name="tipo" required className={claseInput}>
-              {TIPOS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-            </select>
-          </Campo>
-          <Campo etiqueta="Prefijo" nombre="prefijo" ayuda="Opcional">
-            <input id="prefijo" name="prefijo" className={claseInput} placeholder="C-" />
-          </Campo>
-          <Campo etiqueta="Desde" nombre="desde" requerido>
-            <input id="desde" name="desde" type="number" min={1} required className={claseInput} />
-          </Campo>
-          <Campo etiqueta="Hasta" nombre="hasta" requerido>
-            <input id="hasta" name="hasta" type="number" min={1} required className={claseInput} />
-          </Campo>
-          <div className="flex items-end">
-            <Boton type="submit">Emitir</Boton>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader titulo="Asignación de Órdenes" />
+          <div className="p-4 pt-0 space-y-4">
+            <p className="text-sm text-slate-500">
+              Genera los números de orden para los choferes que aún no tienen uno. 
+              Los números de orden se asignan secuencialmente. Esto es necesario para poder imprimir las planillas.
+            </p>
+            <Boton onClick={handleAsignar} disabled={isPending} className="w-full sm:w-auto">
+              {isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Asignando...</>
+              ) : (
+                "Generar Órdenes Pendientes"
+              )}
+            </Boton>
           </div>
-        </form>
-      </Card>
+        </Card>
 
-      <Card>
-        <CardHeader titulo="Talonarios" extra={<span className="text-xs text-slate-500">{series.length}</span>} />
-        {series.length === 0 ? (
-          <Vacio mensaje="Todavía no hay talonarios."
-                 detalle="Sin números disponibles, los documentos se crean igual pero salen sin número de orden, y la planilla impresa queda sin la columna que el chofer firma." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Tipo</th>
-                  <th className="px-4 py-2 font-medium">Rango</th>
-                  <th className="px-4 py-2 text-right font-medium">Total</th>
-                  <th className="px-4 py-2 text-right font-medium">Disponibles</th>
-                  <th className="px-4 py-2 text-right font-medium">Usados</th>
-                  <th className="px-4 py-2 text-right font-medium">Anulados</th>
-                  <th className="px-4 py-2 font-medium">Estado</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {series.map((s) => (
-                  <tr key={s.id}>
-                    <td className="px-4 py-2 font-medium">{ETIQUETA[s.tipo_documento] ?? s.tipo_documento}</td>
-                    <td className="px-4 py-2 tabular-nums text-slate-600">
-                      {s.prefijo}{s.desde} – {s.prefijo}{s.hasta}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.total}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.disponibles}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.usados}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.anulados}</td>
-                    <td className="px-4 py-2">
-                      <Badge tono={s.disponibles === 0 ? "error" : s.disponibles < 10 ? "alerta" : "ok"}>
-                        {s.disponibles === 0 ? "Agotada" : s.disponibles < 10 ? "Quedan pocos" : "Disponible"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <Card>
+          <CardHeader titulo="Impresión de Planillas" />
+          <div className="p-4 pt-0 space-y-4">
+            <p className="text-sm text-slate-500">
+              Visualiza y genera los documentos en formato A4 listos para imprimir. Las planillas vienen 
+              agrupadas automáticamente por candidato, supervisor y barrio para agilizar la logística.
+            </p>
+            <Link href="/ordenes/imprimir" passHref>
+              <Boton tipo="secundario" className="w-full sm:w-auto">
+                <Printer className="mr-2 h-4 w-4" /> Ver Planillas de Firma
+              </Boton>
+            </Link>
           </div>
-        )}
-      </Card>
-
-      <Card>
-        <CardHeader titulo="Anular un número" />
-        <form action={anularFolio as (fd: FormData) => void} className="grid gap-4 p-4 sm:grid-cols-3">
-          <Campo etiqueta="Número disponible" nombre="folio_id" requerido>
-            <select id="folio_id" name="folio_id" required className={claseInput}>
-              {(anulables ?? []).map((f) => (
-                <option key={f.id} value={f.id}>Nº {f.numero}</option>
-              ))}
-            </select>
-          </Campo>
-          <div className="sm:col-span-2">
-            <Campo etiqueta="Motivo" nombre="motivo" requerido
-                   ayuda="Una anulación sin motivo no es auditable, así que la base la rechaza.">
-              <input id="motivo" name="motivo" required className={claseInput}
-                     placeholder="talonario dañado" />
-            </Campo>
-          </div>
-          <div className="sm:col-span-3">
-            <Boton type="submit" tipo="secundario">Anular número</Boton>
-          </div>
-        </form>
-        <p className="px-4 pb-3 text-xs text-slate-400">
-          Sólo se pueden anular números disponibles: uno ya usado por un documento queda como está.
-        </p>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
