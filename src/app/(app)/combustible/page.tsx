@@ -1,17 +1,19 @@
-import { PageHeader } from "@/components/shared";
+import { crearClienteServidor } from "@/lib/supabase/server";
+import { CombustibleUI } from "./combustible-ui";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Combustible" };
 
-export default function CombustiblePage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader descripcion="Vales de combustible con folio, fecha y responsable.">
-        Combustible
-      </PageHeader>
-      <div className="rounded-lg border border-dashed p-12 text-center">
-        <p className="text-sm text-muted-foreground">Módulo en construcción — FASE 6</p>
-      </div>
-    </div>
-  );
+export default async function CombustiblePage() {
+  const supabase = await crearClienteServidor();
+  const { data, error } = await supabase
+    .from("v_caja")
+    .select("*")
+    .order("nombre_completo");
+
+  if (error) {
+    return <div className="p-8 text-rose-600">Error al cargar datos: {error.message}</div>;
+  }
+
+  return <CombustibleUI choferes={data || []} />;
 }
