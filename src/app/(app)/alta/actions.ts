@@ -102,3 +102,61 @@ export async function solicitarExcepcion(formData: FormData) {
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
+
+export async function importarGoogleSheets(formData: FormData) {
+  const supabase = await crearClienteServidor();
+  const spreadsheetId = String(formData.get("spreadsheet_id") ?? "").trim();
+  const sheetName = String(formData.get("sheet_name") ?? "").trim();
+
+  if (!spreadsheetId) return { ok: false, error: "ID de Google Sheets es requerido" };
+
+  const { readSheet } = await import("@/lib/sheets");
+  
+  let data;
+  try {
+    data = await readSheet(spreadsheetId, sheetName || 0);
+  } catch (err: any) {
+    return { ok: false, error: `Error leyendo Google Sheets: ${err.message}` };
+  }
+
+  if (!data || data.length === 0) {
+    return { ok: false, error: "La hoja está vacía." };
+  }
+
+  const userRes = await supabase.auth.getUser();
+  if (!userRes.data.user) return { ok: false, error: "No autorizado." };
+
+  // Crear Lote
+  const { data: eleccion } = await supabase.from("elecciones").select("id, organizacion_id").eq("estado", "activa").maybeSingle();
+  if (!eleccion) return { ok: false, error: "No hay elección activa." };
+
+  const { data: lote, error: errLote } = await supabase.from("importacion_lotes").insert({
+    organizacion_id: eleccion.organizacion_id,
+    eleccion_id: eleccion.id,
+    creado_por: userRes.data.user.id,
+    archivo_nombre: `Google Sheets: ${spreadsheetId}`,
+    estado: "pendiente"
+  }).select("id").single();
+
+  if (errLote) return { ok: false, error: "Error al crear lote: " + errLote.message };
+
+  // Insertar filas
+  const filas = data.map((row, i) => ({
+    lote_id: lote.id,
+    fila_numero: i + 2,
+    datos_crudos: row,
+    estado: "pendiente"
+  }));
+
+  const { error: errFilas } = await supabase.from("importacion_filas").insert(filas);
+  if (errFilas) return { ok: false, error: "Error insertando filas: " + errFilas.message };
+
+  // Procesar lote (SQL)
+  const { error: errProc } = await supabase.rpc("fn_procesar_lote_importacion", {
+    p_lote_id: lote.id
+  });
+
+  if (errProc) return { ok: false, error: "Error procesando lote: " + errProc.message };
+
+  return { ok: true, lote_id: lote.id, message: `Se importaron ${data.length} filas. Por favor revisa el panel para resolver posibles conflictos.` };
+}

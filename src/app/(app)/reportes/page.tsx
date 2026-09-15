@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader } from "@/components/shared";
+import { Aviso, PageHeader } from "@/components/shared";
 import { Card, CardHeader, Boton } from "@/components/ui";
-import { Download, FileText, FileSpreadsheet, Printer } from "lucide-react";
+import { Download, FileText, FileSpreadsheet, Printer, CloudUpload } from "lucide-react";
+import { exportarReporteSheets } from "./actions";
 
 type TipoReporte = "padron" | "combustible" | "anticipos" | "pagos" | "lista_negra";
 
@@ -37,6 +38,7 @@ const REPORTES = [
 
 export default function ReportesPage() {
   const [descargando, setDescargando] = useState<string | null>(null);
+  const [resultadoSheets, setResultadoSheets] = useState<{ repId: string, ok: boolean, msg: string } | null>(null);
 
   const handleDescarga = async (tipo: TipoReporte, formato: "csv" | "xlsx") => {
     setDescargando(`${tipo}-${formato}`);
@@ -51,9 +53,18 @@ export default function ReportesPage() {
   };
 
   const handleImpresion = (tipo: TipoReporte) => {
-    // Abrimos el CSV en una nueva pestaña que devuelva HTML para impresión, o usamos la vista de impresión genérica.
-    // Para simplificar, usamos una vista /reportes/imprimir/[tipo]
     window.open(`/reportes/imprimir/${tipo}`, "_blank");
+  };
+
+  const handleExportarSheets = async (tipo: TipoReporte) => {
+    const url = window.prompt("Ingrese el ID o la URL completa de la planilla de Google Sheets:");
+    if (!url) return;
+
+    setDescargando(`${tipo}-sheets`);
+    setResultadoSheets(null);
+    const res = await exportarReporteSheets(tipo, url);
+    setDescargando(null);
+    setResultadoSheets({ repId: tipo, ok: res.ok, msg: res.ok ? res.message : (res.error || "Error") });
   };
 
   return (
@@ -88,10 +99,24 @@ export default function ReportesPage() {
               <Boton
                 tipo="secundario"
                 className="w-full justify-start"
-                onClick={() => handleImpresion(rep.id)}
+                onClick={() => handleExportarSheets(rep.id as TipoReporte)}
+                disabled={descargando === `${rep.id}-sheets`}
+              >
+                <CloudUpload className="mr-2 h-4 w-4 text-emerald-600" />
+                {descargando === `${rep.id}-sheets` ? "Exportando..." : "Exportar a Google Sheets"}
+              </Boton>
+              <Boton
+                tipo="secundario"
+                className="w-full justify-start"
+                onClick={() => handleImpresion(rep.id as TipoReporte)}
               >
                 <Printer className="mr-2 h-4 w-4 text-slate-600" /> Imprimir (PDF)
               </Boton>
+              {resultadoSheets?.repId === rep.id && (
+                <div className="mt-2">
+                  <Aviso tono={resultadoSheets.ok ? "ok" : "error"}>{resultadoSheets.msg}</Aviso>
+                </div>
+              )}
             </div>
           </Card>
         ))}

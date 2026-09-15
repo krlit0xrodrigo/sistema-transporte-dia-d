@@ -2,6 +2,7 @@ import Link from "next/link";
 import { crearClienteServidor } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared";
 import { FormAlta } from "./form-alta";
+import { ImportarSheets } from "./importar-sheets";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import type { ResultadoPadron } from "@/types/database";
@@ -81,6 +82,8 @@ export default async function AltaPage({
           nombre_completo: padron.nombre_completo,
         } : null}
       />
+
+      <ImportarSheets />
     </div>
   );
 }
