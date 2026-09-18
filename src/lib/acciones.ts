@@ -76,9 +76,29 @@ export async function pagarAnticipo(formData: FormData) {
 }
 
 export async function autorizarPago(formData: FormData) {
+  const chofer_id = String(formData.get("chofer_id"));
+  let excepcion_id = String(formData.get("excepcion_id") ?? "") || null;
+  
+  if (!excepcion_id) {
+    const supabase = await crearClienteServidor();
+    const { data } = await supabase
+      .from('excepciones')
+      .select('id')
+      .eq('chofer_id', chofer_id)
+      .eq('tipo', 'pago_sin_actividad')
+      .eq('estado', 'aprobada')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (data) {
+      excepcion_id = data.id;
+    }
+  }
+
   return llamar("fn_autorizar_pago_final", {
-    p_chofer_id: String(formData.get("chofer_id")),
-    p_excepcion_id: String(formData.get("excepcion_id") ?? "") || null,
+    p_chofer_id: chofer_id,
+    p_excepcion_id: excepcion_id,
   }, "/caja");
 }
 

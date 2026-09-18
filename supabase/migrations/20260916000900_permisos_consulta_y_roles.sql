@@ -127,6 +127,7 @@ end $$;
 --
 -- El resto de las tablas siguen sin DELETE para nadie.
 -- ---------------------------------------------------------------------
+revoke delete on all tables in schema public from authenticated;
 grant delete on usuario_roles  to authenticated;
 grant delete on usuario_scopes to authenticated;
 

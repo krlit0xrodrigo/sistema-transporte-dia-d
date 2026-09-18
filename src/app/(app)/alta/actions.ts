@@ -33,6 +33,8 @@ export async function altaChofer(formData: FormData): Promise<AltaResult> {
     categoria: String(formData.get("categoria") ?? ""),
     marca: String(formData.get("marca") ?? "").trim(),
     modelo: String(formData.get("modelo") ?? "").trim(),
+    aprobar_lista_negra: formData.get("aprobar_lista_negra") === "true",
+    motivo_excepcion: String(formData.get("motivo_excepcion") ?? "").trim(),
   };
 
   const parsed = altaChoferSchema.safeParse(raw);
@@ -60,6 +62,8 @@ export async function altaChofer(formData: FormData): Promise<AltaResult> {
       categoria: d.categoria || null,
       marca: d.marca || null,
       modelo: d.modelo || null,
+      aprobar_lista_negra: d.aprobar_lista_negra,
+      motivo_excepcion: d.motivo_excepcion || null,
     },
   });
 
@@ -159,4 +163,30 @@ export async function importarGoogleSheets(formData: FormData) {
   if (errProc) return { ok: false, error: "Error procesando lote: " + errProc.message };
 
   return { ok: true, lote_id: lote.id, message: `Se importaron ${data.length} filas. Por favor revisa el panel para resolver posibles conflictos.` };
+}
+
+export async function consultarDatosChofer(ci: string) {
+  const supabase = await crearClienteServidor();
+  
+  // 1. Verificar padrón
+  const { data: padronData, error: padronError } = await supabase
+    .rpc("fn_verificar_padron", { p_ci: ci });
+
+  let padron = null;
+  if (!padronError && padronData && padronData.length > 0) {
+    padron = padronData[0];
+  }
+
+  // 2. Consultar antecedentes (histórico)
+  const { data: antecedentesData, error: antecedentesError } = await supabase
+    .from("v_antecedentes")
+    .select("*")
+    .eq("ci", ci)
+    .order("eleccion_fecha", { ascending: false });
+    
+  return {
+    ok: true,
+    padron: padron?.encontrado ? padron : null,
+    antecedentes: antecedentesError ? [] : (antecedentesData || []),
+  };
 }

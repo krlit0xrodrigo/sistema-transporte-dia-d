@@ -75,12 +75,16 @@ export function PageHeader({ children, descripcion, accion }: {
   accion?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div>
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-3 mb-2">
+          <img src="/marca/anr.png" alt="ANR" className="h-6 sm:h-8 w-auto object-contain" />
+          <img src="/marca/mbarete.png" alt="Mbarete" className="h-6 sm:h-8 w-auto object-contain" />
+        </div>
         <h1 className="text-xl font-semibold tracking-tight">{children}</h1>
-        {descripcion && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{descripcion}</p>}
+        {descripcion && <p className="max-w-2xl text-sm text-muted-foreground">{descripcion}</p>}
       </div>
-      {accion}
+      {accion && <div className="mt-auto">{accion}</div>}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -163,7 +163,12 @@ export default async function FichaPersona(
   const todosChoferes = (choferes ?? []) as unknown as ChoferFicha[];
   const choferActual = todosChoferes.find(
     (c) => c.origen_planilla_id === null && c.eleccion_id === eleccionActual?.id,
-  );
+  ) as any;
+  
+  if (choferActual) {
+    redirect(`/choferes/${choferActual.chofer_id}`);
+  }
+
   const choferesHistoricos = todosChoferes.filter(
     (c) => c.origen_planilla_id !== null,
   );
@@ -429,8 +434,8 @@ export default async function FichaPersona(
               {ants.map((a, i) => (
                 <div key={i} className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-sm first:border-0 first:pt-0">
                   <span className="flex items-center gap-3">
-                    <Badge variant={a.resultado === "cumplio" ? "success" : "warning"}>
-                      {a.resultado === "cumplio" ? "Trabajó" : "No trabajó"}
+                    <Badge variant={a.resultado === "cumplio" ? "success" : "danger"}>
+                      {a.resultado === "cumplio" ? "Cumplió" : "No cumplió"}
                     </Badge>
                     <span className="text-muted-foreground">{formatearKm(a.km_recorridos)}</span>
                     <span className="text-muted-foreground/70">{a.tuvo_gps ? "con GPS" : "sin GPS"}</span>

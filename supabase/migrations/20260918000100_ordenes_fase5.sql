@@ -56,14 +56,14 @@ select c.id as chofer_id,
        c.eleccion_id,
        c.numero_orden,
        c.estado_servicio,
-       c.chapa,
-       c.marca,
-       c.modelo,
+       v.chapa,
+       v.marca,
+       v.modelo,
        p.ci,
        p.nombre_completo as nombre,
-       p.telefono,
-       sup.nombre as supervisor_nombre,
-       cand.nombre as candidato_nombre,
+       p.telefono_original as telefono,
+       sup.alias as supervisor_nombre,
+       cand.nombre_publico as candidato_nombre,
        b.nombre as barrio_nombre
 from choferes c
 join personas p on p.id = c.persona_id
@@ -71,6 +71,8 @@ left join asignaciones a on a.chofer_id = c.id and a.vigente_hasta is null
 left join supervisores sup on sup.id = a.supervisor_id
 left join candidatos cand on cand.id = a.candidato_id
 left join barrios b on b.id = a.barrio_id
+left join chofer_vehiculos cv on cv.chofer_id = c.id and cv.hasta is null
+left join vehiculos v on v.id = cv.vehiculo_id
 where c.numero_orden is not null
   and c.estado != 'baja'
-order by cand.nombre, sup.nombre, b.nombre, c.numero_orden;
+order by cand.nombre_publico, sup.alias, b.nombre, c.numero_orden;

@@ -56,12 +56,15 @@ export interface ResultadoPadron {
   encontrado: boolean;
   ci: string;
   nombre_completo: string | null;
+  nombres?: string | null;
+  apellidos?: string | null;
   local_nombre: string | null;
   mesa: number | null;
   orden: number | null;
   direccion: string | null;
   partidos: string | null;
   seccional: string | null;
+  historial_votacion: { eleccion_codigo: string; voto: string }[] | null;
 }
 
 export interface Aparicion {

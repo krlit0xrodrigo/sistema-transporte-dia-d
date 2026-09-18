@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { crearClienteServidor } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared";
+import { Aviso } from "@/components/ui";
 import { FormAlta } from "./form-alta";
-import { ImportarSheets } from "./importar-sheets";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import type { ResultadoPadron } from "@/types/database";
@@ -29,25 +29,65 @@ export default async function AltaPage({
 
   const supabase = await crearClienteServidor();
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: scopes } = user 
+    ? await supabase.from("usuario_scopes").select("candidato_id").eq("usuario_id", user.id).eq("tipo", "candidato")
+    : { data: [] };
+    
+  const misCandidatos = scopes?.map(s => s.candidato_id).filter(Boolean) || [];
+
+  let qCandidatos = supabase.from("candidatos").select("id, nombre_publico").eq("activo", true).order("nombre_publico");
+  let qSupervisores = supabase.from("supervisores").select("id, alias").eq("activo", true).order("alias");
+  
+  if (misCandidatos.length > 0) {
+    qCandidatos = qCandidatos.in("id", misCandidatos);
+    qSupervisores = qSupervisores.in("candidato_id", misCandidatos);
+  }
+
   // Cargar catálogos y verificar padrón en paralelo
   const [
     { data: candidatos },
     { data: barrios },
     { data: supervisores },
     padronResult,
+    permisoResult,
   ] = await Promise.all([
-    supabase.from("candidatos").select("id, nombre_publico").eq("activo", true).order("nombre_publico"),
+    qCandidatos,
     supabase.from("barrios").select("id, nombre").eq("activo", true).order("nombre"),
-    supabase.from("supervisores").select("id, alias").eq("activo", true).order("alias"),
+    qSupervisores,
     ciPrecargada
       ? supabase.rpc("fn_verificar_padron", { p_ci: ciPrecargada })
       : Promise.resolve({ data: null }),
+    supabase.rpc("auth_tiene_permiso", { p_codigo: "choferes.crear" }),
   ]);
 
   const padronRaw = padronResult.data;
   const padron = ciPrecargada
     ? ((Array.isArray(padronRaw) ? padronRaw[0] : padronRaw) as ResultadoPadron | null)
     : null;
+    
+  const puedeCrear = permisoResult.data;
+
+  if (!puedeCrear) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Link
+            href="/choferes"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" /> Choferes
+          </Link>
+          <PageHeader descripcion="Acceso restringido">
+            Alta de chofer
+          </PageHeader>
+        </div>
+        <Aviso tono="error">
+          <strong>No tienes permisos</strong> para dar de alta choferes. Tu acceso a esta función ha sido restringido por el administrador.
+        </Aviso>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -83,7 +123,6 @@ export default async function AltaPage({
         } : null}
       />
 
-      <ImportarSheets />
     </div>
   );
 }

@@ -29,3 +29,19 @@ export async function crearClienteServidor() {
     },
   );
 }
+import { createClient } from "@supabase/supabase-js";
+
+/**
+ * Cliente de Administracin de Supabase (Service Role).
+ * SOLO PARA OPERACIONES QUE REQUIEREN SALTAR RLS O MANEJAR USUARIOS.
+ */
+export function crearClienteAdmin() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Falta SUPABASE_SERVICE_ROLE_KEY en el entorno");
+  }
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+}

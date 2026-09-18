@@ -4,6 +4,7 @@ import { crearClienteServidor } from "@/lib/supabase/server";
 import {
   Aviso, Badge, BotonEnlace, Card, CardHeader, Dato, Titulo, Vacio,
 } from "@/components/ui";
+import { AlertTriangle, Plus } from "lucide-react";
 import {
   ETIQUETA_ACTIVIDAD, ETIQUETA_IDENTIDAD,
   formatearCI, formatearFecha, formatearKm, formatearTelefono,
@@ -11,6 +12,18 @@ import {
 import type { Aparicion, Antecedente, FichaChofer, ResultadoPadron } from "@/types/database";
 
 export const dynamic = "force-dynamic";
+
+const MESES: Record<string, number> = {
+  ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6,
+  jul: 7, ago: 8, sep: 9, oct: 10, nov: 11, dic: 12
+};
+
+function getEleccionScore(codigo: string) {
+  const m = codigo.substring(0, 3).toLowerCase();
+  const y = parseInt(codigo.substring(3), 10) || 0;
+  const mes = MESES[m] || 0;
+  return y * 100 + mes;
+}
 
 /**
  * Ficha.
@@ -43,7 +56,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   // El padrón se consulta por RPC: deja rastro en accesos_sensibles.
   const [
     { data: padronRaw }, { data: apariciones }, { data: antecedentes },
-    { data: eleccionActual }, { data: participaciones },
+    { data: eleccionActual }, { data: participaciones }, { data: gpsRaw }
   ] = await Promise.all([
     supabase.rpc("fn_verificar_padron", { p_ci: c.ci }),
     supabase.from("apariciones_origen")
@@ -57,6 +70,8 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
     supabase.from("v_choferes_ficha")
       .select("chofer_id, eleccion_id, origen_planilla_id, candidato, barrio, supervisor")
       .eq("persona_id", c.persona_id).neq("chofer_id", id),
+    // Estado del GPS vinculado
+    supabase.from("dispositivos_gps").select("estado").eq("chofer_id", id).maybeSingle(),
   ]);
 
   const padron = (Array.isArray(padronRaw) ? padronRaw[0] : padronRaw) as ResultadoPadron | undefined;
@@ -74,6 +89,8 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   const contraparteActual = otras.find(
     (o) => o.origen_planilla_id === null && o.eleccion_id === eleccionActual?.id);
   const contraparteHistorica = otras.find((o) => o.origen_planilla_id !== null);
+  
+  const gps = gpsRaw as { estado: string } | null;
 
   return (
     <div className="space-y-6">
@@ -142,6 +159,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
             <CardHeader titulo="Asignación" />
             <dl className="grid grid-cols-2 gap-4 p-4">
               <Dato etiqueta="Candidato">{c.candidato ?? "—"}</Dato>
+              <Dato etiqueta="Nro de Orden">{c.numero_orden ?? "—"}</Dato>
               <Dato etiqueta="Barrio">{c.barrio ?? "—"}</Dato>
               <Dato etiqueta="Supervisor">{c.supervisor ?? "—"}</Dato>
               <Dato etiqueta="Responsable">
@@ -150,19 +168,41 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
               </Dato>
               <Dato etiqueta="Estado de servicio"><Badge>{c.estado_servicio}</Badge></Dato>
               <Dato etiqueta="Vehículo">{c.chapa ? `${c.chapa} · ${c.categoria ?? ""}` : "—"}</Dato>
+              <Dato etiqueta="GPS vinculado">
+                {gps?.estado ? <Badge>{gps.estado}</Badge> : <span className="text-tinta-tenue">No</span>}
+              </Dato>
             </dl>
           </Card>
 
           <Card>
             <CardHeader titulo="Padrón" extra={<span className="text-xs text-tinta-tenue">consulta registrada</span>} />
             {padron?.encontrado ? (
-              <dl className="grid grid-cols-2 gap-4 p-4">
-                <Dato etiqueta="Local">{padron.local_nombre ?? "—"}</Dato>
-                <Dato etiqueta="Mesa">{padron.mesa ?? "—"}</Dato>
-                <Dato etiqueta="Orden">{padron.orden ?? "—"}</Dato>
-                <Dato etiqueta="Seccional">{padron.seccional ?? "—"}</Dato>
-                <div className="col-span-2"><Dato etiqueta="Dirección">{padron.direccion ?? "—"}</Dato></div>
-              </dl>
+              <div className="flex flex-col">
+                <dl className="grid grid-cols-2 gap-4 p-4 border-b border-border/50">
+                  <Dato etiqueta="Local">{padron.local_nombre ?? "—"}</Dato>
+                  <Dato etiqueta="Mesa">{padron.mesa ?? "—"}</Dato>
+                  <Dato etiqueta="Orden">{padron.orden ?? "—"}</Dato>
+                  <Dato etiqueta="Seccional">{padron.seccional ?? "—"}</Dato>
+                  <div className="col-span-2"><Dato etiqueta="Dirección">{padron.direccion ?? "—"}</Dato></div>
+                </dl>
+                {padron.historial_votacion && padron.historial_votacion.length > 0 && (
+                  <div className="p-4 bg-slate-50/50 rounded-b-lg">
+                    <p className="text-xs font-semibold text-tinta-tenue uppercase tracking-wider mb-3">Historial de Votación</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[...padron.historial_votacion]
+                        .sort((a, b) => getEleccionScore(b.eleccion_codigo) - getEleccionScore(a.eleccion_codigo))
+                        .map(v => (
+                        <div key={v.eleccion_codigo} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded text-[11px] font-medium border border-border/60 shadow-sm">
+                          <span className="text-tinta-tenue">{v.eleccion_codigo.toUpperCase()}:</span>
+                          <span className={v.voto === 'S' ? 'text-success font-bold' : 'text-destructive font-bold'}>
+                            {v.voto === 'S' ? 'SI' : 'NO'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <Vacio mensaje="No figura en el padrón de Villa Hayes." />
             )}

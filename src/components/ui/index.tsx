@@ -206,3 +206,5 @@ export function Titulo({ children, descripcion, accion }: {
     </div>
   );
 }
+export * from "./data-table";
+export { Paginacion } from "./pagination";

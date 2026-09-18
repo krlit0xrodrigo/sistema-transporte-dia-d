@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { crearClienteServidor } from "@/lib/supabase/server";
+import { crearClienteServidor, crearClienteAdmin } from "@/lib/supabase/server";
 import {
   Aviso, Badge, BotonEnlace, Card, CardHeader, Tabla, Th, Titulo, Vacio,
 } from "@/components/ui";
 import { Buscador } from "@/components/buscador";
 import { formatearCI, formatearTelefono } from "@/lib/format";
+import { Paginacion } from "@/components/ui/pagination";
+import { FiltrosTablaChoferes } from "./filtros-tabla";
 
 export const dynamic = "force-dynamic";
 
@@ -34,29 +36,65 @@ const TONO_IDENTIDAD = {
   discrepancia_nombre: "error",
 } as const;
 
-type SP = Promise<{ vista?: string }>;
+type SP = Promise<{ vista?: string; page?: string; candidato?: string; barrio?: string; padron?: string; ci?: string; nombre?: string }>;
 
 export default async function Choferes({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const vista = sp.vista === "historico" ? "historico" : "operativo";
+  const currentPage = parseInt(sp.page || "1", 10) || 1;
+  const limit = 50;
+  const offset = (currentPage - 1) * limit;
   const supabase = await crearClienteServidor();
+  const supabaseAdmin = crearClienteAdmin();
 
-  const { data: eleccion } = await supabase
-    .from("elecciones").select("id, nombre").eq("estado", "activa").maybeSingle();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: userRoles } = await supabase
+    .from("usuario_roles")
+    .select("roles!inner(codigo)")
+    .eq("usuario_id", user?.id) as { data: { roles: { codigo: string } }[] | null };
+  
+  const roles = userRoles?.map(r => r.roles.codigo) || [];
+  const esConsulta = roles.includes("consulta");
+  const esTerritorial = roles.includes("candidato") || roles.includes("concejal");
+  
+  const [{ data: puedeCrear }, { data: eleccion }] = await Promise.all([
+    supabase.rpc("auth_tiene_permiso", { p_codigo: "choferes.crear" }),
+    supabase.from("elecciones").select("id, nombre").eq("estado", "activa").maybeSingle()
+  ]);
 
-  // La operación actual se lista entera porque empieza vacía y va a crecer
-  // de a uno: cuando tenga 300 filas se pagina. El histórico NO se lista:
-  // se busca.
-  const { data: actuales, count: totalActual, error: errorActual } = vista === "operativo" && eleccion
-    ? await supabase
+  // Usamos admin bypass SOLO si es rol consulta puro (sin ser candidato/concejal).
+  // Para candidato/concejal, usamos la conexión normal para que RLS filtre su propio alcance.
+  // Superadmin y admin ya ven todo naturalmente a través de RLS.
+  const dbActual = (esConsulta && !esTerritorial) ? supabaseAdmin : supabase;
+
+  // Solo mostramos en los filtros los candidatos y barrios que están en la estructura activa actual
+  const { data: estructuraActiva } = await dbActual
+    .from("v_caja")
+    .select("candidato, barrio")
+    .eq("eleccion_id", eleccion?.id || "");
+
+  const listaCandidatos = Array.from(new Set((estructuraActiva || []).map(e => e.candidato).filter(Boolean))).sort();
+  const listaBarrios = Array.from(new Set((estructuraActiva || []).map(e => e.barrio).filter(Boolean))).sort();
+
+  let qActual = dbActual
         .from("v_choferes_ficha")
         .select("chofer_id, ci, nombre_completo, telefono_e164, candidato, barrio, supervisor, estado_identidad, numero_orden", { count: "exact" })
-        .eq("eleccion_id", eleccion.id)
+        .eq("eleccion_id", eleccion?.id || "")
         .is("origen_planilla_id", null)
         .neq("estado", "baja")
-        .order("nombre_completo")
-        .limit(200)
+        .order("nombre_completo");
+
+  if (sp.candidato) qActual = qActual.eq("candidato", sp.candidato);
+  if (sp.barrio) qActual = qActual.eq("barrio", sp.barrio);
+  if (sp.padron) qActual = qActual.eq("estado_identidad", sp.padron);
+  if (sp.ci) qActual = qActual.ilike("ci", `%${sp.ci.replace(/\./g, "")}%`);
+  if (sp.nombre) qActual = qActual.ilike("nombre_completo", `%${sp.nombre}%`);
+
+  const { data: actuales, count: totalActual, error: errorActual } = eleccion
+    ? await qActual.range(offset, offset + limit - 1)
     : { data: null, count: 0, error: null };
+
+  const totalPages = Math.max(1, Math.ceil((totalActual || 0) / limit));
 
   // La separación histórico / operativo se apoya en `origen_planilla_id`,
   // que la migración 0008 agrega a la vista. Si todavía no se aplicó, es
@@ -65,10 +103,7 @@ export default async function Choferes({ searchParams }: { searchParams: SP }) {
     errorActual?.message?.includes("origen_planilla_id") ||
     errorActual?.message?.includes("numero_orden"));
 
-  const { count: totalHistorico } = await supabase
-    .from("v_choferes_ficha")
-    .select("*", { count: "exact", head: true })
-    .not("origen_planilla_id", "is", null);
+
 
   type Fila = {
     chofer_id: string; ci: string; nombre_completo: string; telefono_e164: string | null;
@@ -81,7 +116,7 @@ export default async function Choferes({ searchParams }: { searchParams: SP }) {
     <div className="space-y-6">
       <Titulo
         descripcion="Buscá por cédula, nombre o apellido. La cédula funciona con puntos o sin puntos."
-        accion={<BotonEnlace href="/choferes/nuevo">Dar de alta</BotonEnlace>}
+        accion={puedeCrear ? <BotonEnlace href="/choferes/nuevo">Dar de alta</BotonEnlace> : undefined}
       >
         Choferes
       </Titulo>
@@ -95,39 +130,19 @@ export default async function Choferes({ searchParams }: { searchParams: SP }) {
       )}
 
       <Card className="p-4">
-        <Buscador autoFocus />
+        <Buscador autoFocus ambito="operativo" />
       </Card>
-
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Qué listado ver">
-        <Pestania href="/choferes" activa={vista === "operativo"}
-                  texto="Operación actual" cuenta={totalActual ?? 0} />
-        <Pestania href="/choferes?vista=historico" activa={vista === "historico"}
-                  texto="Histórico · interna 07/06/2026" cuenta={totalHistorico ?? 0} />
-      </div>
-
-      {vista === "historico" ? (
-        <Card>
-          <CardHeader
-            titulo="Histórico de la interna del 7 de junio de 2026"
-            descripcion="Se conserva completo. No es el operativo actual."
-          />
-          <Vacio
-            mensaje={`${totalHistorico ?? 0} participaciones históricas`}
-            detalle="Se consultan buscando arriba por cédula, nombre o apellido. No se listan de una: traer 599 filas a la pantalla sin que nadie las pida es lo que hacía lenta esta página. Cada ficha muestra si esa persona trabajó el 7 de junio, con quién y cuántos kilómetros hizo."
-          />
-        </Card>
-      ) : (
         <Card>
           <CardHeader
             titulo="Operación actual"
             descripcion={eleccion?.nombre ?? "Sin elección activa"}
-            extra={<span className="text-xs text-tinta-tenue">{filas.length} de {totalActual ?? 0}</span>}
+            extra={<span className="text-xs text-tinta-tenue">{totalActual ?? 0} registros encontrados</span>}
           />
-          {filas.length === 0 ? (
+          {filas.length === 0 && !sp.candidato && !sp.barrio && !sp.padron && !sp.ci && !sp.nombre ? (
             <Vacio
               mensaje="Todavía no hay choferes en el operativo actual"
               detalle="Es lo esperado: el operativo del 4 de octubre arranca vacío. Los 599 registros de las planillas son el histórico de la interna del 7 de junio y están en la otra pestaña. Cada chofer de este operativo se da de alta acá, y al cargarlo vas a ver sus antecedentes de junio antes de confirmarlo."
-              accion={<BotonEnlace href="/choferes/nuevo">Dar de alta el primero</BotonEnlace>}
+              accion={puedeCrear ? <BotonEnlace href="/choferes/nuevo">Dar de alta el primero</BotonEnlace> : undefined}
             />
           ) : (
             <Tabla>
@@ -141,9 +156,16 @@ export default async function Choferes({ searchParams }: { searchParams: SP }) {
                   <Th>Teléfono</Th>
                   <Th>Padrón</Th>
                 </tr>
+                <FiltrosTablaChoferes candidatos={listaCandidatos as string[]} barrios={listaBarrios as string[]} />
               </thead>
               <tbody className="divide-y divide-zinc-100">
-                {filas.map((c) => (
+                {filas.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-tinta-suave">
+                      No se encontraron choferes con los filtros aplicados.
+                    </td>
+                  </tr>
+                ) : filas.map((c) => (
                   <tr key={c.chofer_id} className="hover:bg-rojo-50/40">
                     <td className="px-4 py-2.5 text-right tabular-nums text-tinta-suave">
                       {c.numero_orden ?? "—"}
@@ -172,8 +194,13 @@ export default async function Choferes({ searchParams }: { searchParams: SP }) {
               </tbody>
             </Tabla>
           )}
+          <div className="p-4 border-t border-zinc-100 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground font-medium hidden sm:block">
+              Mostrando {totalActual === 0 ? 0 : (currentPage - 1) * limit + 1} a {Math.min(currentPage * limit, totalActual || 0)} de {totalActual || 0}
+            </p>
+            <Paginacion currentPage={currentPage} totalPages={totalPages} />
+          </div>
         </Card>
-      )}
     </div>
   );
 }

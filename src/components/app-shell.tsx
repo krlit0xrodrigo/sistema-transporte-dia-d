@@ -17,6 +17,8 @@ interface AppShellProps {
  * Recibe los permisos como array (serializable desde el server component)
  * y los convierte en Set para el sidebar.
  */
+import { ThemeToggle } from "@/components/theme-toggle";
+
 export function AppShell({ permisos, usuario, children }: AppShellProps) {
   const router = useRouter();
   const permisosSet = React.useMemo(() => new Set(permisos), [permisos]);
@@ -50,16 +52,22 @@ export function AppShell({ permisos, usuario, children }: AppShellProps) {
             onSignOut={handleSignOut}
           />
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <span className="text-xs font-bold">D</span>
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full overflow-hidden border border-slate-200">
+              <img src="/marca/candidato.jpg" alt="Candidato" className="h-full w-full object-cover" />
             </div>
-            <span className="text-sm font-semibold">Día D</span>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold leading-none">Sistema de gestion</span>
+              <span className="text-[10px] text-muted-foreground leading-tight">de Transporte</span>
+            </div>
           </div>
-          <div className="ml-auto text-right">
-            <p className="max-w-[10rem] truncate text-xs font-medium">{usuario.nombre}</p>
-            {usuario.soloLectura && (
-              <p className="text-[10px] text-muted-foreground">Solo lectura</p>
-            )}
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            <div className="text-right">
+              <p className="max-w-[8rem] truncate text-xs font-medium">{usuario.nombre}</p>
+              {usuario.soloLectura && (
+                <p className="text-[10px] text-muted-foreground">Solo lectura</p>
+              )}
+            </div>
           </div>
         </header>
 

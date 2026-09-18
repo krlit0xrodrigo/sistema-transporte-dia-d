@@ -62,6 +62,8 @@ export const altaChoferSchema = z.object({
     .max(50, "Modelo demasiado largo.")
     .optional()
     .or(z.literal("")),
+  aprobar_lista_negra: z.boolean().optional(),
+  motivo_excepcion: z.string().optional(),
 });
 
 export type AltaChoferInput = z.infer<typeof altaChoferSchema>;
@@ -74,14 +76,17 @@ export const ERRORES_SERVIDOR: Record<string, string> = {
   LISTA_NEGRA: "La persona está en lista negra. Requiere una excepción aprobada.",
   CUPO_AGOTADO: "El cupo está agotado. Solicitá una excepción para avanzar.",
   SIN_PERMISO: "Tu usuario no tiene permiso para dar de alta choferes.",
+  MOTIVO_OBLIGATORIO: "Debes ingresar un motivo para justificar esta alta bajo tu responsabilidad.",
 };
 
 export function traducirErrorServidor(mensaje: string): string {
   for (const [codigo, texto] of Object.entries(ERRORES_SERVIDOR)) {
     if (mensaje.includes(codigo)) {
-      return codigo === "CUPO_AGOTADO"
-        ? `${texto} (${mensaje.split("CUPO_AGOTADO:")[1]?.trim() ?? ""})`
-        : texto;
+      if (codigo === "CUPO_AGOTADO" || codigo === "CHOFER_DUPLICADO") {
+        const extra = mensaje.split(`${codigo}:`)[1]?.trim();
+        return extra ? `${texto} (${extra})` : texto;
+      }
+      return texto;
     }
   }
   return mensaje;

@@ -139,6 +139,17 @@
     @apply outline-2 outline-offset-2 outline-ring;
     border-radius: 2px;
   }
+
+  /* Listados con bordes y encabezados fijos */
+  table {
+    @apply border-collapse;
+  }
+  table th, table td {
+    @apply border border-border;
+  }
+  table thead th {
+    @apply sticky top-0 bg-muted/95 backdrop-blur-sm z-10;
+  }
 }
 
 @layer utilities {

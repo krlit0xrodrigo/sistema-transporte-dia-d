@@ -25,7 +25,7 @@ export default function ConsultaPage() {
 
       <Card>
         <CardContent className="p-4">
-          <Buscador autoFocus destino="consulta" />
+          <Buscador autoFocus destino="consulta" ambito="operativo" />
         </CardContent>
       </Card>
 

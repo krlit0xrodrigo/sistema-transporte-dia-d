@@ -19,3 +19,7 @@ __pycache__/
 tsconfig.tsbuildinfo
 .env.local
 .vercel
+brain/
+scratch/
+*.txt
+*.js

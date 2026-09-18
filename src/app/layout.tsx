@@ -1,12 +1,6 @@
-import { Inter } from "next/font/google";
 import type { Metadata } from "next";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -14,14 +8,24 @@ export const metadata: Metadata = {
     template: "%s | Día D",
   },
   description: "Sistema de gestión de transporte para el operativo electoral — Día D, Villa Hayes, Presidente Hayes, Paraguay.",
+  icons: {
+    icon: "/marca/logo1.png",
+  },
   robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es-PY" className={inter.variable} suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
-        {children}
+    <html lang="es-PY" suppressHydrationWarning>
+      <body className="min-h-screen bg-background text-foreground antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

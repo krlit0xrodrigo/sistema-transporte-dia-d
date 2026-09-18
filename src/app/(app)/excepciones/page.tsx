@@ -3,11 +3,13 @@ import { Badge, Boton, Card, CardHeader, Vacio } from "@/components/ui";
 import { formatearCI, formatearFecha } from "@/lib/format";
 import { aprobarExcepcion, rechazarExcepcion } from "./actions";
 import { PageHeader } from "@/components/shared";
+import { Paginacion } from "@/components/ui/pagination";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Excepciones" };
 
-export default async function ExcepcionesPage() {
+export default async function ExcepcionesPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const sp = await searchParams;
   const supabase = await crearClienteServidor();
   const { data, error } = await supabase
     .from("v_excepciones")
@@ -16,7 +18,15 @@ export default async function ExcepcionesPage() {
 
   const entradas = (data ?? []) as any[];
   const pendientes = entradas.filter((e) => e.estado === "pendiente");
-  const resueltas = entradas.filter((e) => e.estado !== "pendiente");
+  const todasResueltas = entradas.filter((e) => e.estado !== "pendiente");
+
+  const page = typeof sp.page === "string" ? parseInt(sp.page, 10) : 1;
+  const paginaActual = isNaN(page) || page < 1 ? 1 : page;
+  const limite = 20;
+  const totalPages = Math.max(1, Math.ceil(todasResueltas.length / limite));
+  const offset = (paginaActual - 1) * limite;
+  
+  const resueltas = todasResueltas.slice(offset, offset + limite);
 
   return (
     <div className="space-y-6">
@@ -91,6 +101,15 @@ export default async function ExcepcionesPage() {
               </li>
             ))}
           </ul>
+          
+          {totalPages > 1 && (
+            <div className="border-t border-slate-100 px-4 py-3">
+              <Paginacion 
+                currentPage={paginaActual} 
+                totalPages={totalPages} 
+              />
+            </div>
+          )}
         </Card>
       )}
     </div>

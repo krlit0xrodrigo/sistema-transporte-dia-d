@@ -19,6 +19,7 @@ import {
   FileSignature,
   Fuel,
   Banknote,
+  Calculator,
   CreditCard,
   UserCog,
   ScrollText,
@@ -27,6 +28,8 @@ import {
   Menu,
   ChevronLeft,
   LogOut,
+  FolderTree,
+  Printer,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,6 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Sheet,
   SheetContent,
@@ -74,17 +78,16 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/consulta", label: "Consulta", icon: Search, permiso: null },
       { href: "/choferes", label: "Choferes", icon: Users, permiso: "choferes.ver" },
       { href: "/alta", label: "Alta de chofer", icon: UserPlus, permiso: "choferes.crear" },
-      { href: "/asignaciones", label: "Asignaciones", icon: ArrowRightLeft, permiso: "asignaciones.ver" },
-      { href: "/ordenes", label: "Órdenes de Trabajo", icon: ClipboardList, permiso: "folios.ver" },
+      { href: "/planillas", label: "Planillas de Firma", icon: Printer, permiso: null },
     ],
   },
   {
     title: "Control",
     items: [
-      { href: "/cupos", label: "Cupos", icon: Gauge, permiso: "cupos.ver" },
+      { href: "/estructura", label: "Estructura y Cupos", icon: FolderTree, permiso: "cupos.ver" },
       { href: "/lista-negra", label: "Lista negra", icon: ShieldAlert, permiso: "lista_negra.ver" },
       { href: "/excepciones", label: "Excepciones", icon: ShieldCheck, permiso: "excepciones.ver" },
-      { href: "/antecedentes", label: "Antecedentes", icon: History, permiso: null },
+      { href: "/antecedentes", label: "Antecedentes", icon: History, permiso: "antecedentes.ver" },
       { href: "/reportes", label: "Reportes", icon: BarChart3, permiso: "reportes.ver" },
       { href: "/gps", label: "GPS", icon: MapPin, permiso: "gps.ver" },
     ],
@@ -92,11 +95,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: "Caja",
     items: [
-      { href: "/contratos", label: "Contratos", icon: FileSignature, permiso: "contratos.ver" },
-      { href: "/combustible", label: "Combustible", icon: Fuel, permiso: "caja.ver" },
-      { href: "/anticipos", label: "Anticipos", icon: Banknote, permiso: "caja.ver" },
-      { href: "/pagos", label: "Pagos", icon: CreditCard, permiso: "caja.ver" },
-      { href: "/caja/folios", label: "Folios", icon: FileDigit, permiso: "folios.ver" },
+      { href: "/caja", label: "Caja", icon: Banknote, permiso: "caja.ver" },
+      { href: "/caja/montos", label: "Montos", icon: Calculator, permiso: "admin.catalogos" },
     ],
   },
   {
@@ -184,12 +184,12 @@ function SidebarContent({
       <div className={cn("flex items-center border-b px-4 py-4", collapsed && "justify-center px-2")}>
         {!collapsed ? (
           <div className="flex flex-1 items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="text-sm font-bold">D</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full overflow-hidden border border-slate-200 shrink-0">
+              <img src="/marca/candidato.jpg" alt="Candidato" className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold leading-tight">Día D</p>
-              <p className="truncate text-[11px] text-muted-foreground">Villa Hayes</p>
+              <p className="truncate text-sm font-semibold leading-tight">Sistema de gestion</p>
+              <p className="truncate text-[11px] text-muted-foreground">de Transporte</p>
             </div>
             {onToggle && (
               <Button variant="ghost" size="icon" onClick={onToggle} className="h-7 w-7 shrink-0">
@@ -200,8 +200,8 @@ function SidebarContent({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="text-sm font-bold">D</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full overflow-hidden border border-slate-200">
+              <img src="/marca/candidato.jpg" alt="Candidato" className="h-full w-full object-cover" />
             </div>
             {onToggle && (
               <Button variant="ghost" size="icon" onClick={onToggle} className="h-7 w-7">
@@ -240,16 +240,20 @@ function SidebarContent({
       </ScrollArea>
 
       {/* Footer — usuario */}
-      <div className={cn("border-t p-3", collapsed && "flex flex-col items-center")}>
+      <div className={cn("border-t p-3 flex flex-col gap-2", collapsed && "items-center")}>
         {!collapsed && (
-          <div className="mb-2 px-3">
-            <p className="truncate text-sm font-medium">{usuario.nombre}</p>
-            <p className="truncate text-xs text-muted-foreground">{usuario.email}</p>
-            {usuario.soloLectura && (
-              <p className="mt-0.5 text-[11px] font-medium text-warning">Solo lectura</p>
-            )}
+          <div className="px-3 flex items-start justify-between">
+            <div className="overflow-hidden">
+              <p className="truncate text-sm font-medium">{usuario.nombre}</p>
+              <p className="truncate text-xs text-muted-foreground">{usuario.email}</p>
+              {usuario.soloLectura && (
+                <p className="mt-0.5 text-[11px] font-medium text-warning">Solo lectura</p>
+              )}
+            </div>
+            <ThemeToggle />
           </div>
         )}
+        {collapsed && <ThemeToggle />}
         <Button
           variant="ghost"
           size={collapsed ? "icon" : "sm"}

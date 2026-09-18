@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/server";
 import { Badge, Boton, Campo, Card, CardHeader, Vacio, claseInput } from "@/components/ui";
 import type { CupoConsumo } from "@/types/database";
@@ -39,7 +40,14 @@ export default async function Cupos({
       supervisor_id: ambito === "supervisor" ? destino : null,
       limite,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      let msg = error.message;
+      if (msg.includes("cupos_candidato_id_fkey")) msg = "Destino inválido para Candidato.";
+      else if (msg.includes("cupos_barrio_id_fkey")) msg = "Destino inválido para Barrio.";
+      else if (msg.includes("cupos_supervisor_id_fkey")) msg = "Destino inválido para Supervisor.";
+      else if (msg.includes("ck_cupo_ambito")) msg = "Debes seleccionar un destino correcto para este ámbito (o dejar vacío si es Global).";
+      redirect(`/cupos?error=${encodeURIComponent(msg)}`);
+    }
     revalidatePath("/cupos");
   }
 

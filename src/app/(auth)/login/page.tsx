@@ -18,8 +18,11 @@ export default async function Login({
   async function entrar(formData: FormData) {
     "use server";
     const supabase = await crearClienteServidor();
+    const rawUsername = String(formData.get("username") ?? "").trim();
+    const authEmail = rawUsername.includes("@") ? rawUsername : `${rawUsername}@dia-d.local`;
+
     const { error } = await supabase.auth.signInWithPassword({
-      email: String(formData.get("email") ?? ""),
+      email: authEmail,
       password: String(formData.get("password") ?? ""),
     });
     // No se distingue "usuario inexistente" de "contraseña incorrecta":
@@ -32,21 +35,28 @@ export default async function Login({
     <main className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_28rem]">
       {/* Panel izquierdo — solo en desktop */}
       <div className="relative hidden overflow-hidden bg-primary lg:block">
-        <div className="flex h-full flex-col items-center justify-center p-12">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-            <span className="text-4xl font-bold text-white">D</span>
-          </div>
-          <h2 className="mt-6 text-center text-2xl font-bold text-white">
+        <img 
+          src="/marca/candidato.jpg" 
+          alt="Candidato" 
+          className="absolute inset-0 h-full w-full object-contain object-center p-8"
+        />
+        {/* Sombra sutil oscura solo en la parte de abajo para que el texto resalte, sin teñir la foto de rojo */}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+        
+        <div className="relative flex h-full flex-col justify-end p-12 pb-16">
+          <h2 className="text-4xl font-bold text-white drop-shadow-md">
             Logística Día D
           </h2>
-          <p className="mt-2 text-center text-sm text-white/80">
+          <p className="mt-3 text-lg font-medium text-white/90 drop-shadow-md">
             Sistema de Gestión de Transporte
           </p>
-          <p className="mt-1 text-center text-sm text-white/60">
+          
+          <div className="mt-8 h-1 w-20 rounded-full bg-primary" />
+          
+          <p className="mt-8 text-base text-white/80">
             Villa Hayes · Presidente Hayes
           </p>
-          <div className="mt-8 h-1 w-16 rounded-full bg-white/30" />
-          <p className="mt-8 text-center text-xs text-white/50">
+          <p className="mt-1 text-sm text-white/60">
             Domingo 4 de octubre de 2026
           </p>
         </div>
@@ -55,10 +65,13 @@ export default async function Login({
       {/* Formulario de login */}
       <div className="flex flex-col justify-center bg-background px-6 py-10 sm:px-10">
         <div className="mx-auto w-full max-w-sm">
+
+
+          <div className="flex items-center gap-12 sm:gap-16 mb-8">
+            <img src="/marca/anr.png" alt="ANR" className="h-10 sm:h-12 w-auto object-contain" />
+            <img src="/marca/mbarete.png" alt="Mbarete" className="h-10 sm:h-12 w-auto object-contain" />
+          </div>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <span className="text-lg font-bold">D</span>
-            </div>
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">
                 Logística Día D
@@ -75,18 +88,17 @@ export default async function Login({
             <input type="hidden" name="volver" value={sp.volver ?? "/"} />
 
             <div className="space-y-2">
-              <Label htmlFor="email">
-                Correo <span className="text-destructive" aria-hidden="true">*</span>
+              <Label htmlFor="username">
+                Usuario <span className="text-destructive" aria-hidden="true">*</span>
               </Label>
               <Input
-                id="email"
-                name="email"
-                type="email"
+                id="username"
+                name="username"
+                type="text"
                 required
-                autoComplete="email"
-                inputMode="email"
+                autoComplete="username"
                 autoFocus
-                placeholder="usuario@ejemplo.com"
+                placeholder="ej. admin"
               />
             </div>
 
@@ -105,7 +117,7 @@ export default async function Login({
             </div>
 
             {sp.error && (
-              <Aviso tono="error">Correo o contraseña incorrectos.</Aviso>
+              <Aviso tono="error">Usuario o contraseña incorrectos.</Aviso>
             )}
 
             <Button type="submit" className="w-full">
@@ -113,9 +125,8 @@ export default async function Login({
             </Button>
           </form>
 
-          <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
-            Sistema interno del operativo. Maneja datos personales de personas reales:
-            todo acceso y toda exportación quedan registrados con tu usuario.
+          <p className="mt-8 text-xs font-bold text-black dark:text-white text-center">
+            Sistema de Gestión de Transporte · Equipo Mbarete | Lista 1 · Uso Interno
           </p>
         </div>
       </div>

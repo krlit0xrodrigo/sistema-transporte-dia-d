@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { crearClienteServidor } from "@/lib/supabase/server";
+import { crearClienteServidor, crearClienteAdmin } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Vacio } from "@/components/shared";
 import { 
   Users, CheckCircle, AlertTriangle, Gauge, 
-  FileSignature, Fuel, ShieldAlert, ShieldCheck, ClipboardList 
+  FileSignature, Fuel, ShieldAlert, ShieldCheck, ClipboardList, LayoutList 
 } from "lucide-react";
 import type { Metadata } from "next";
 
@@ -62,36 +62,96 @@ function semaforo(pct: number) {
 
 export default async function Tablero() {
   const supabase = await crearClienteServidor();
+  const supabaseAdmin = crearClienteAdmin();
 
-  // Queries base
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: userRoles } = await supabase
+    .from("usuario_roles")
+    .select("roles!inner(codigo)")
+    .eq("usuario_id", user?.id) as { data: { roles: { codigo: string } }[] | null };
+  const roles = userRoles?.map(r => r.roles.codigo) || [];
+  const esConsulta = roles.includes("consulta");
+  const esTerritorial = roles.includes("candidato") || roles.includes("concejal");
+  const dbActual = (esConsulta && !esTerritorial) ? supabaseAdmin : supabase;
+
+  const { data: scope } = await supabase
+    .from("usuario_scopes")
+    .select("*")
+    .eq("usuario_id", user?.id)
+    .maybeSingle();
+
+  const { data: puedeGestionarCupos } = await supabase.rpc('auth_tiene_permiso', { p_codigo: 'cupos.definir' });
+
+  const { data: eleccion } = await supabase
+    .from("elecciones")
+    .select("id")
+    .eq("estado", "activa")
+    .single();
+
+  let qCupos = supabaseAdmin.from("v_cupos_consumo")
+    .select("*")
+    .eq("eleccion_id", eleccion?.id || "")
+    .order("porcentaje", { ascending: false });
+
+  if (scope) {
+    if (scope.candidato_id) {
+      const { data: supervisores } = await supabase.from("supervisores").select("id").eq("candidato_id", scope.candidato_id);
+      const superIds = supervisores?.map(s => s.id) || [];
+      if (superIds.length > 0) {
+        qCupos = qCupos.or(`candidato_id.eq.${scope.candidato_id},supervisor_id.in.(${superIds.join(',')})`);
+      } else {
+        qCupos = qCupos.eq("candidato_id", scope.candidato_id);
+      }
+    } else if (scope.supervisor_id) {
+      qCupos = qCupos.eq("supervisor_id", scope.supervisor_id);
+    } else if (scope.barrio_id) {
+      qCupos = qCupos.eq("barrio_id", scope.barrio_id);
+    }
+  }
+
+  // Queries base (Dashboard General)
   const [
     { count: choferes }, 
     { count: verificados }, 
     { count: conflictos }, 
     { data: cupos }
   ] = await Promise.all([
-    supabase.from("choferes").select("*", { count: "exact", head: true }).eq("estado", "activo"),
-    supabase.from("personas").select("*", { count: "exact", head: true }).eq("estado_identidad", "verificada"),
-    supabase.from("importacion_filas").select("*", { count: "exact", head: true }).eq("estado", "conflicto"),
-    supabase.from("v_cupos_consumo").select("*").order("porcentaje", { ascending: false }),
+    dbActual.from("choferes").select("*", { count: "exact", head: true }).eq("eleccion_id", eleccion?.id || "").eq("estado", "activo").is("origen_planilla_id", null),
+    dbActual.from("choferes").select("personas!inner(id)", { count: "exact", head: true }).eq("eleccion_id", eleccion?.id || "").eq("estado", "activo").is("origen_planilla_id", null).eq("personas.estado_identidad", "verificada"),
+    esTerritorial ? Promise.resolve({ count: 0 }) : supabaseAdmin.from("importacion_filas").select("*", { count: "exact", head: true }).eq("estado", "conflicto"),
+    qCupos,
   ]);
 
-  // Queries Fase 7
+  // Queries Fase 7 (Control Financiero y Seguridad)
   const [
-    { count: ordenesEmitidas },
     { count: contratosFirmados },
     { count: valesEntregados },
     { count: listaNegraActiva },
     { count: excepcionesPendientes },
+    { data: dataCaja },
   ] = await Promise.all([
-    supabase.from("choferes").select("*", { count: "exact", head: true }).not("numero_orden", "is", null).eq("estado", "activo"),
-    supabase.from("contratos").select("*", { count: "exact", head: true }).eq("estado", "firmado"),
-    supabase.from("vales_combustible").select("*", { count: "exact", head: true }).eq("estado", "entregado"),
-    supabase.from("v_lista_negra").select("*", { count: "exact", head: true }).eq("activo", true),
-    supabase.from("v_excepciones").select("*", { count: "exact", head: true }).eq("estado", "pendiente"),
+    dbActual.from("contratos").select("*", { count: "exact", head: true }).eq("estado", "firmado"),
+    dbActual.from("vales_combustible").select("*", { count: "exact", head: true }).eq("estado", "entregado"),
+    esTerritorial ? Promise.resolve({ count: 0 }) : dbActual.from("v_lista_negra").select("*", { count: "exact", head: true }).eq("activo", true),
+    esTerritorial ? Promise.resolve({ count: 0 }) : dbActual.from("v_excepciones").select("*", { count: "exact", head: true }).eq("estado", "pendiente"),
+    dbActual.from("v_caja").select("candidato, supervisor, barrio").eq("eleccion_id", eleccion?.id),
   ]);
 
   const lista = (cupos ?? []) as CupoConsumo[];
+  const choferesEstructura = (dataCaja ?? []) as any[];
+
+  const contarPor = (campo: string) => {
+    const conteo = choferesEstructura.reduce((acc, ch) => {
+      const val = ch[campo] || "Sin Asignar";
+      acc[val] = (acc[val] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    return Object.entries(conteo).sort((a, b) => (b[1] as number) - (a[1] as number));
+  };
+
+  const topCandidatos = contarPor("candidato");
+  const topSupervisores = contarPor("supervisor");
+  const topBarrios = contarPor("barrio");
 
   return (
     <div className="space-y-6 pb-12">
@@ -101,8 +161,7 @@ export default async function Tablero() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard valor={choferes ?? 0} etiqueta="Choferes activos" icon={Users} href="/choferes" />
-        <StatCard valor={ordenesEmitidas ?? 0} etiqueta="Órdenes asignadas" icon={ClipboardList} href="/ordenes" />
-        <StatCard valor={verificados ?? 0} etiqueta="Padrón cruzado" detalle="Identidades verificadas" icon={CheckCircle} href="/consulta" />
+        <StatCard valor={verificados ?? 0} etiqueta="Padrón cruzado" detalle="Nuevos choferes verificados" icon={CheckCircle} href="/consulta" />
         <StatCard valor={conflictos ?? 0} etiqueta="Filas en conflicto" detalle="En proceso de importación" icon={AlertTriangle} />
       </div>
 
@@ -122,9 +181,11 @@ export default async function Tablero() {
               <Gauge className="h-4 w-4 text-muted-foreground" />
               Estado de Cupos por Ámbito
             </CardTitle>
-            <Button variant="link" size="sm" asChild>
-              <Link href="/cupos">Gestionar cupos</Link>
-            </Button>
+            {puedeGestionarCupos && (
+              <Button variant="link" size="sm" asChild>
+                <Link href="/cupos">Gestionar cupos</Link>
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {lista.length === 0 ? (
@@ -159,6 +220,79 @@ export default async function Tablero() {
                     </li>
                   );
                 })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <h2 className="text-lg font-semibold tracking-tight mt-10 mb-4 border-b pb-2">Estructura Operativa (Choferes)</h2>
+      
+      <div className="grid gap-6 sm:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Users className="h-4 w-4 text-slate-500" />
+              Por Candidato
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topCandidatos.length === 0 ? (
+              <Vacio mensaje="Sin datos" />
+            ) : (
+              <ul className="divide-y text-sm">
+                {topCandidatos.map(([nombre, cant]) => (
+                  <li key={nombre} className="flex justify-between py-2">
+                    <span className="text-slate-700 truncate pr-2">{nombre}</span>
+                    <span className="font-semibold tabular-nums">{cant as React.ReactNode}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <LayoutList className="h-4 w-4 text-slate-500" />
+              Por Supervisor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topSupervisores.length === 0 ? (
+              <Vacio mensaje="Sin datos" />
+            ) : (
+              <ul className="divide-y text-sm">
+                {topSupervisores.map(([nombre, cant]) => (
+                  <li key={nombre} className="flex justify-between py-2">
+                    <span className="text-slate-700 truncate pr-2">{nombre}</span>
+                    <span className="font-semibold tabular-nums">{cant as React.ReactNode}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-slate-500" />
+              Por Barrio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topBarrios.length === 0 ? (
+              <Vacio mensaje="Sin datos" />
+            ) : (
+              <ul className="divide-y text-sm">
+                {topBarrios.map(([nombre, cant]) => (
+                  <li key={nombre} className="flex justify-between py-2">
+                    <span className="text-slate-700 truncate pr-2">{nombre}</span>
+                    <span className="font-semibold tabular-nums">{cant as React.ReactNode}</span>
+                  </li>
+                ))}
               </ul>
             )}
           </CardContent>

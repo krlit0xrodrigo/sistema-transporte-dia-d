@@ -1,6 +1,7 @@
 import { crearClienteServidor } from "@/lib/supabase/server";
 import { formatearCI } from "@/lib/format";
 import type { Metadata } from "next";
+import { BotonImprimir } from "./boton-imprimir";
 
 export const metadata: Metadata = { title: "Planillas de Firma" };
 
@@ -36,12 +37,7 @@ export default async function PlanillasImpresionPage() {
           <h1 className="text-xl font-bold">Planillas de Firma</h1>
           <p className="text-sm text-slate-500">Usa Ctrl+P (o Cmd+P) para imprimir o guardar como PDF.</p>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium text-sm transition-colors"
-        >
-          Imprimir Planillas
-        </button>
+        <BotonImprimir />
       </div>
 
       {Object.entries(agrupado).map(([cand, sups]) => (

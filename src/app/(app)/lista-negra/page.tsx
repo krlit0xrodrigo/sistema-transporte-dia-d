@@ -1,7 +1,7 @@
 import { crearClienteServidor } from "@/lib/supabase/server";
-import { Badge, Boton, Campo, Card, CardHeader, Vacio, claseInput } from "@/components/ui";
-import { formatearCI, formatearFecha } from "@/lib/format";
-import { agregarListaNegra, revocarListaNegra } from "@/lib/acciones";
+import { Campo, Card, CardHeader, claseInput, Boton } from "@/components/ui";
+import { agregarListaNegra } from "@/lib/acciones";
+import { ListaNegraClient } from "./lista-negra-client";
 
 const MOTIVOS = [
   ["incumplio_operativo", "Incumplió el operativo"],
@@ -14,27 +14,57 @@ const MOTIVOS = [
   ["otro", "Otro (requiere detalle)"],
 ] as const;
 
-const ETIQUETA = Object.fromEntries(MOTIVOS) as Record<string, string>;
-
-interface Entrada {
-  id: string; ci: string; nombre_completo: string;
-  motivo_codigo: string; motivo_detalle: string | null; severidad: string;
-  vigente_desde: string; vigente_hasta: string | null;
-  revocado_en: string | null; motivo_revocacion: string | null; vigente: boolean;
-}
-
 export default async function ListaNegra() {
   const supabase = await crearClienteServidor();
-  const { data, error } = await supabase
-    .from("v_lista_negra").select("*").order("created_at", { ascending: false });
-  const entradas = (data ?? []) as Entrada[];
-  const vigentes = entradas.filter((e) => e.vigente);
-  const historicas = entradas.filter((e) => !e.vigente);
+  
+  // 1. Obtener Lista Negra
+  const { data: dataLn, error } = await supabase
+    .from("v_lista_negra")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  // 2. Obtener Antecedentes (No Cumplió)
+  const { data: dataAnt } = await supabase
+    .from("v_antecedentes")
+    .select("*")
+    .eq("resultado", "no_cumplio");
+
+  // 3. Obtener apariciones origen para cruzar candidato/supervisor
+  const { data: apariciones } = await supabase
+    .from("apariciones_origen")
+    .select("persona_id, eleccion_id, candidato_texto, supervisor_texto");
+
+  const entradas = (dataLn ?? []).map(r => ({
+    id: r.id,
+    ci: r.ci,
+    nombre_completo: r.nombre_completo,
+    motivo_codigo: r.motivo_codigo,
+    motivo_detalle: r.motivo_detalle,
+    severidad: r.severidad,
+    vigente_desde: r.vigente_desde,
+    vigente_hasta: r.vigente_hasta,
+    revocado_en: r.revocado_en,
+    motivo_revocacion: r.motivo_revocacion,
+    vigente: r.revocado_en === null && new Date(r.vigente_desde) <= new Date() && (r.vigente_hasta === null || new Date(r.vigente_hasta) > new Date())
+  }));
+
+  const antecedentes = (dataAnt ?? []).map((a: any) => {
+    // Buscar con quién estuvo en esa elección específica
+    const apar = (apariciones ?? []).find(ap => ap.persona_id === a.persona_id && ap.eleccion_id === a.eleccion_id);
+    return {
+      ci: a.ci,
+      nombre_completo: a.nombre_completo,
+      candidato: apar?.candidato_texto || "",
+      supervisor: apar?.supervisor_texto || "",
+      resultado: a.resultado,
+      eleccion_nombre: a.eleccion_nombre
+    };
+  });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">Lista negra</h1>
+        <h1 className="text-xl font-semibold">Lista negra y Antecedentes</h1>
         <p className="text-sm text-slate-500">
           Vive a nivel persona, no de chofer: un bloqueo sobrevive entre elecciones.
           Nada se borra — una entrada se revoca y queda el historial.
@@ -74,66 +104,13 @@ export default async function ListaNegra() {
           <Campo etiqueta="Vence" nombre="vence_en" ayuda="Vacío = indefinido (D-06).">
             <input id="vence_en" name="vence_en" type="date" className={claseInput} />
           </Campo>
-          <div className="sm:col-span-3">
+          <div className="sm:col-span-3 flex justify-end mt-2">
             <Boton type="submit">Agregar a la lista negra</Boton>
           </div>
         </form>
       </Card>
 
-      <Card>
-        <CardHeader titulo="Vigentes" extra={<span className="text-xs text-slate-500">{vigentes.length}</span>} />
-        {vigentes.length === 0 ? (
-          <Vacio mensaje="No hay entradas vigentes." />
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {vigentes.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{e.nombre_completo}</p>
-                  <p className="text-xs tabular-nums text-slate-500">{formatearCI(e.ci)}</p>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm">{ETIQUETA[e.motivo_codigo] ?? e.motivo_codigo}</p>
-                  {e.motivo_detalle && <p className="text-xs text-slate-500">{e.motivo_detalle}</p>}
-                </div>
-                <Badge tono={e.severidad === "bloqueo_total" ? "error" : "alerta"}>
-                  {e.severidad === "bloqueo_total" ? "Bloqueo total" : "Advertencia"}
-                </Badge>
-                <span className="text-xs text-slate-500">
-                  {e.vigente_hasta ? `hasta ${formatearFecha(e.vigente_hasta)}` : "indefinido"}
-                </span>
-                <form action={revocarListaNegra as (fd: FormData) => void} className="flex gap-1">
-                  <input type="hidden" name="id" value={e.id} />
-                  <input name="motivo" required placeholder="Motivo de la revocación"
-                         className="w-56 rounded-md px-2 py-1 text-xs ring-1 ring-inset ring-slate-300" />
-                  <button className="rounded-md px-2 py-1 text-xs ring-1 ring-inset ring-slate-300 hover:bg-slate-50">
-                    Revocar
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      {historicas.length > 0 && (
-        <Card>
-          <CardHeader titulo="Revocadas y vencidas" extra={<span className="text-xs text-slate-500">{historicas.length}</span>} />
-          <ul className="divide-y divide-slate-100">
-            {historicas.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-center gap-3 px-4 py-2 text-sm">
-                <span className="font-medium">{e.nombre_completo}</span>
-                <span className="text-xs tabular-nums text-slate-500">{formatearCI(e.ci)}</span>
-                <span className="text-slate-600">{ETIQUETA[e.motivo_codigo] ?? e.motivo_codigo}</span>
-                <Badge>{e.revocado_en ? "Revocada" : "Vencida"}</Badge>
-                {e.motivo_revocacion && (
-                  <span className="text-xs text-slate-500">{e.motivo_revocacion}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      <ListaNegraClient entradas={entradas} antecedentes={antecedentes} />
     </div>
   );
 }
