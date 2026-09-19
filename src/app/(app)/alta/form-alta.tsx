@@ -102,6 +102,14 @@ export function FormAlta({
 
   const ci = watch("ci");
 
+  useEffect(() => {
+    if (consultaRealizada) {
+      setConsultaRealizada(false);
+      setFetchedPadron(null);
+      setFetchedAntecedentes([]);
+    }
+  }, [ci]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleConsultar() {
     if (!ci) return;
     setIsFetching(true);
@@ -309,7 +317,12 @@ export function FormAlta({
                 id="nombres"
                 placeholder="Daniel"
                 {...register("nombres")}
-                className={cn(errors.nombres && "border-destructive")}
+                className={cn(
+                  errors.nombres && "border-destructive",
+                  fetchedPadron && "bg-slate-100 text-slate-500 cursor-not-allowed focus-visible:ring-0"
+                )}
+                readOnly={!!fetchedPadron}
+                tabIndex={fetchedPadron ? -1 : 0}
               />
               <FieldError error={errors.nombres?.message} />
             </div>
@@ -320,6 +333,12 @@ export function FormAlta({
                 id="apellidos"
                 placeholder="Britez"
                 {...register("apellidos")}
+                className={cn(
+                  errors.apellidos && "border-destructive",
+                  fetchedPadron && "bg-slate-100 text-slate-500 cursor-not-allowed focus-visible:ring-0"
+                )}
+                readOnly={!!fetchedPadron}
+                tabIndex={fetchedPadron ? -1 : 0}
               />
               <FieldError error={errors.apellidos?.message} />
             </div>

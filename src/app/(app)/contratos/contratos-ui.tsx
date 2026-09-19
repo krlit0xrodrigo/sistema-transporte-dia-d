@@ -3,21 +3,47 @@
 import { useState, useTransition } from "react";
 import { registrarContrato } from "./actions";
 import { PageHeader, Aviso } from "@/components/shared";
-import { Boton, Card, CardHeader, Vacio, Input, Badge } from "@/components/ui";
+import { Boton, Card, CardHeader, Vacio, Input } from "@/components/ui";
+import { Paginacion } from "@/components/ui/pagination";
 import { formatearCI } from "@/lib/format";
-import { Search, FileSignature, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { Search, FileSignature, CheckCircle, AlertTriangle } from "lucide-react";
+import { format } from "date-fns";
+
+const ITEMS_POR_PAGINA = 10;
 
 export function ContratosUI({ choferes }: { choferes: any[] }) {
-  const [busqueda, setBusqueda] = useState("");
+  const [busquedaPendientes, setBusquedaPendientes] = useState("");
+  const [paginaPendientes, setPaginaPendientes] = useState(1);
+
+  const [busquedaFirmados, setBusquedaFirmados] = useState("");
+  const [paginaFirmados, setPaginaFirmados] = useState(1);
+
   const [isPending, startTransition] = useTransition();
   const [resultado, setResultado] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const filtrados = choferes.filter(c => 
+  // Pendientes
+  const filtradosPendientes = choferes.filter(c => 
     !c.contrato_firmado && 
-    (c.ci.includes(busqueda) || c.nombre_completo.toLowerCase().includes(busqueda.toLowerCase()))
+    (c.ci.includes(busquedaPendientes) || c.nombre_completo.toLowerCase().includes(busquedaPendientes.toLowerCase()))
+  );
+  
+  const totalPendientes = Math.max(1, Math.ceil(filtradosPendientes.length / ITEMS_POR_PAGINA));
+  const paginadosPendientes = filtradosPendientes.slice(
+    (paginaPendientes - 1) * ITEMS_POR_PAGINA,
+    paginaPendientes * ITEMS_POR_PAGINA
   );
 
-  const firmados = choferes.filter(c => c.contrato_firmado);
+  // Firmados
+  const filtradosFirmados = choferes.filter(c => 
+    c.contrato_firmado && 
+    (c.ci.includes(busquedaFirmados) || c.nombre_completo.toLowerCase().includes(busquedaFirmados.toLowerCase()))
+  );
+
+  const totalFirmados = Math.max(1, Math.ceil(filtradosFirmados.length / ITEMS_POR_PAGINA));
+  const paginadosFirmados = filtradosFirmados.slice(
+    (paginaFirmados - 1) * ITEMS_POR_PAGINA,
+    paginaFirmados * ITEMS_POR_PAGINA
+  );
 
   const onFirmar = (fd: FormData) => {
     startTransition(async () => {
@@ -46,69 +72,136 @@ export function ContratosUI({ choferes }: { choferes: any[] }) {
         </Aviso>
       )}
 
+      {/* PENDIENTES */}
       <Card>
-        <CardHeader titulo="Choferes pendientes de firma" extra={<span className="text-xs text-slate-500">{filtrados.length}</span>} />
+        <CardHeader titulo="Choferes pendientes de firma" extra={<span className="text-xs text-slate-500">{filtradosPendientes.length}</span>} />
         
         <div className="p-4 border-b border-slate-100">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input 
               placeholder="Buscar por cédula o nombre..." 
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              value={busquedaPendientes}
+              onChange={(e) => {
+                setBusquedaPendientes(e.target.value);
+                setPaginaPendientes(1);
+              }}
               className="pl-9 max-w-sm"
             />
           </div>
         </div>
 
-        {filtrados.length === 0 ? (
-          <Vacio mensaje={busqueda ? "No se encontraron choferes pendientes con esa búsqueda." : "No hay choferes pendientes de firma."} />
+        {filtradosPendientes.length === 0 ? (
+          <Vacio mensaje={busquedaPendientes ? "No se encontraron choferes pendientes con esa búsqueda." : "No hay choferes pendientes de firma."} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Cédula</th>
-                  <th className="px-4 py-2 font-medium">Nombre</th>
-                  <th className="px-4 py-2 font-medium">Vehículo</th>
-                  <th className="px-4 py-2 font-medium">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filtrados.map((c) => (
-                  <tr key={c.chofer_id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 tabular-nums text-slate-600">{formatearCI(c.ci)}</td>
-                    <td className="px-4 py-3 font-medium text-slate-900">{c.nombre_completo}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500 capitalize">{c.actividad}</td>
-                    <td className="px-4 py-3">
-                      <form action={onFirmar} className="flex items-center gap-2">
-                        <input type="hidden" name="chofer_id" value={c.chofer_id} />
-                        {/* El monto es opcional según lo charlado, por ende no obligamos a tipearlo en mostrador */}
-                        <Boton type="submit" disabled={isPending} className="whitespace-nowrap h-8">
-                          <FileSignature className="mr-2 h-4 w-4" /> Firmar
-                        </Boton>
-                      </form>
-                    </td>
+          <div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Cédula</th>
+                    <th className="px-4 py-2 font-medium">Nombre</th>
+                    <th className="px-4 py-2 font-medium">Vehículo</th>
+                    <th className="px-4 py-2 font-medium">Acción</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginadosPendientes.map((c) => (
+                    <tr key={c.chofer_id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 tabular-nums text-slate-600">{formatearCI(c.ci)}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{c.nombre_completo}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 capitalize">{c.actividad}</td>
+                      <td className="px-4 py-3">
+                        <form action={onFirmar} className="flex items-center gap-2">
+                          <input type="hidden" name="chofer_id" value={c.chofer_id} />
+                          <Boton type="submit" disabled={isPending} className="whitespace-nowrap h-8">
+                            <FileSignature className="mr-2 h-4 w-4" /> Firmar
+                          </Boton>
+                        </form>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalPendientes > 1 && (
+              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 sm:px-6">
+                <div className="text-sm text-slate-500">
+                  Mostrando {(paginaPendientes - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaPendientes * ITEMS_POR_PAGINA, filtradosPendientes.length)} de {filtradosPendientes.length}
+                </div>
+                <Paginacion
+                  currentPage={paginaPendientes}
+                  totalPages={totalPendientes}
+                  onPageChange={setPaginaPendientes}
+                />
+              </div>
+            )}
           </div>
         )}
       </Card>
       
-      {firmados.length > 0 && !busqueda && (
-        <Card className="opacity-70">
-          <CardHeader titulo="Últimos firmados" extra={<span className="text-xs text-slate-500">{firmados.length}</span>} />
-          <div className="p-4 flex gap-2 flex-wrap">
-            {firmados.slice(0, 20).map(c => (
-              <Badge key={c.chofer_id} tono="ok">
-                {formatearCI(c.ci)} - {c.nombre_completo.split(" ")[0]}
-              </Badge>
-            ))}
+      {/* FIRMADOS */}
+      <Card>
+        <CardHeader titulo="Contratos Firmados" extra={<span className="text-xs text-slate-500">{filtradosFirmados.length}</span>} />
+        
+        <div className="p-4 border-b border-slate-100">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input 
+              placeholder="Buscar por cédula o nombre..." 
+              value={busquedaFirmados}
+              onChange={(e) => {
+                setBusquedaFirmados(e.target.value);
+                setPaginaFirmados(1);
+              }}
+              className="pl-9 max-w-sm"
+            />
           </div>
-        </Card>
-      )}
+        </div>
+
+        {filtradosFirmados.length === 0 ? (
+          <Vacio mensaje={busquedaFirmados ? "No se encontraron choferes firmados con esa búsqueda." : "No hay choferes que hayan firmado contrato."} />
+        ) : (
+          <div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Cédula</th>
+                    <th className="px-4 py-2 font-medium">Nombre</th>
+                    <th className="px-4 py-2 font-medium">Vehículo</th>
+                    <th className="px-4 py-2 font-medium">Fecha Firma</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginadosFirmados.map((c) => (
+                    <tr key={c.chofer_id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 tabular-nums text-slate-600">{formatearCI(c.ci)}</td>
+                      <td className="px-4 py-3 font-medium text-slate-900">{c.nombre_completo}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 capitalize">{c.actividad}</td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {c.fecha_firma ? format(new Date(c.fecha_firma), "dd/MM/yyyy HH:mm") : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalFirmados > 1 && (
+              <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 sm:px-6">
+                <div className="text-sm text-slate-500">
+                  Mostrando {(paginaFirmados - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaFirmados * ITEMS_POR_PAGINA, filtradosFirmados.length)} de {filtradosFirmados.length}
+                </div>
+                <Paginacion
+                  currentPage={paginaFirmados}
+                  totalPages={totalFirmados}
+                  onPageChange={setPaginaFirmados}
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

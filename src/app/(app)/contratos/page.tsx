@@ -6,9 +6,12 @@ export const metadata: Metadata = { title: "Contratos" };
 
 export default async function ContratosPage() {
   const supabase = await crearClienteServidor();
+  const eleccionId = (await supabase.rpc("auth_eleccion_actual")).data;
+
   const { data, error } = await supabase
     .from("v_caja")
     .select("*")
+    .eq("eleccion_id", eleccionId)
     .order("nombre_completo");
 
   if (error) {
