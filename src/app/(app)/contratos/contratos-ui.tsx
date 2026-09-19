@@ -110,7 +110,7 @@ export function ContratosUI({ choferes }: { choferes: any[] }) {
                     <tr key={c.chofer_id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 tabular-nums text-slate-600">{formatearCI(c.ci)}</td>
                       <td className="px-4 py-3 font-medium text-slate-900">{c.nombre_completo}</td>
-                      <td className="px-4 py-3 text-xs text-slate-500 capitalize">{c.actividad}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 capitalize">{c.vehiculo || "Sin vehículo"}</td>
                       <td className="px-4 py-3">
                         <form action={onFirmar} className="flex items-center gap-2">
                           <input type="hidden" name="chofer_id" value={c.chofer_id} />
@@ -178,7 +178,7 @@ export function ContratosUI({ choferes }: { choferes: any[] }) {
                     <tr key={c.chofer_id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 tabular-nums text-slate-600">{formatearCI(c.ci)}</td>
                       <td className="px-4 py-3 font-medium text-slate-900">{c.nombre_completo}</td>
-                      <td className="px-4 py-3 text-xs text-slate-500 capitalize">{c.actividad}</td>
+                      <td className="px-4 py-3 text-xs text-slate-500 capitalize">{c.vehiculo || "Sin vehículo"}</td>
                       <td className="px-4 py-3 text-slate-600">
                         {c.fecha_firma ? format(new Date(c.fecha_firma), "dd/MM/yyyy HH:mm") : "-"}
                       </td>
