@@ -9,7 +9,7 @@ import { formatearCI } from "@/lib/format";
 import { Search, FileSignature, CheckCircle, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 
-const ITEMS_POR_PAGINA = 10;
+const ITEMS_POR_PAGINA = 5;
 
 export function ContratosUI({ choferes }: { choferes: any[] }) {
   const [busquedaPendientes, setBusquedaPendientes] = useState("");
@@ -124,7 +124,7 @@ export function ContratosUI({ choferes }: { choferes: any[] }) {
                 </tbody>
               </table>
             </div>
-            {totalPendientes > 1 && (
+            {totalPendientes > 0 && (
               <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 sm:px-6">
                 <div className="text-sm text-slate-500">
                   Mostrando {(paginaPendientes - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaPendientes * ITEMS_POR_PAGINA, filtradosPendientes.length)} de {filtradosPendientes.length}
@@ -187,7 +187,7 @@ export function ContratosUI({ choferes }: { choferes: any[] }) {
                 </tbody>
               </table>
             </div>
-            {totalFirmados > 1 && (
+            {totalFirmados > 0 && (
               <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 sm:px-6">
                 <div className="text-sm text-slate-500">
                   Mostrando {(paginaFirmados - 1) * ITEMS_POR_PAGINA + 1} a {Math.min(paginaFirmados * ITEMS_POR_PAGINA, filtradosFirmados.length)} de {filtradosFirmados.length}
