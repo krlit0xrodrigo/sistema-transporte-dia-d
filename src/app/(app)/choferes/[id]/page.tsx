@@ -4,6 +4,7 @@ import { crearClienteServidor } from "@/lib/supabase/server";
 import {
   Aviso, Badge, BotonEnlace, Card, CardHeader, Dato, Titulo, Vacio,
 } from "@/components/ui";
+import { EditarAsignacion } from "./editar-asignacion";
 import { AlertTriangle, Plus } from "lucide-react";
 import {
   ETIQUETA_ACTIVIDAD, ETIQUETA_IDENTIDAD,
@@ -56,7 +57,8 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   // El padrón se consulta por RPC: deja rastro en accesos_sensibles.
   const [
     { data: padronRaw }, { data: apariciones }, { data: antecedentes },
-    { data: eleccionActual }, { data: participaciones }, { data: gpsRaw }
+    { data: eleccionActual }, { data: participaciones }, { data: gpsRaw },
+    { data: currentAsignacion }, { data: candidatos }, { data: supervisores }, { data: barrios }
   ] = await Promise.all([
     supabase.rpc("fn_verificar_padron", { p_ci: c.ci }),
     supabase.from("apariciones_origen")
@@ -72,6 +74,11 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
       .eq("persona_id", c.persona_id).neq("chofer_id", id),
     // Estado del GPS vinculado
     supabase.from("dispositivos_gps").select("estado").eq("chofer_id", id).maybeSingle(),
+    // Datos para edición (sólo los que tienen cupo en la elección actual)
+    supabase.from("asignaciones").select("candidato_id, supervisor_id, barrio_id").eq("chofer_id", id).is("vigente_hasta", null).maybeSingle(),
+    supabase.from("candidatos").select("id, nombre_publico, cupos!inner(eleccion_id, ambito)").eq("cupos.eleccion_id", c.eleccion_id).eq("cupos.ambito", "candidato"),
+    supabase.from("supervisores").select("id, alias, cupos!inner(eleccion_id, ambito)").eq("cupos.eleccion_id", c.eleccion_id).eq("cupos.ambito", "supervisor"),
+    supabase.from("barrios").select("id, nombre, cupos!inner(eleccion_id, ambito)").eq("cupos.eleccion_id", c.eleccion_id).eq("cupos.ambito", "barrio"),
   ]);
 
   const padron = (Array.isArray(padronRaw) ? padronRaw[0] : padronRaw) as ResultadoPadron | undefined;
@@ -172,6 +179,20 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
                 {gps?.estado ? <Badge>{gps.estado}</Badge> : <span className="text-tinta-tenue">No</span>}
               </Dato>
             </dl>
+            {!esHistorico && currentAsignacion && (
+              <div className="border-t border-border/50 p-4">
+                <EditarAsignacion
+                  choferId={id}
+                  candidatoId={currentAsignacion.candidato_id}
+                  supervisorId={currentAsignacion.supervisor_id}
+                  barrioId={currentAsignacion.barrio_id}
+                  estadoServicio={c.estado_servicio}
+                  candidatos={candidatos ? Array.from(new Map(candidatos.map((x: any) => [x.id, x])).values()) as any[] : []}
+                  supervisores={supervisores ? Array.from(new Map(supervisores.map((x: any) => [x.id, x])).values()) as any[] : []}
+                  barrios={barrios ? Array.from(new Map(barrios.map((x: any) => [x.id, x])).values()) as any[] : []}
+                />
+              </div>
+            )}
           </Card>
 
           <Card>

@@ -19,6 +19,7 @@ interface FilaCaja {
   pago_finalizado: boolean;
   autorizado_por: string | null;
   actividad: string | null;
+  estado_servicio: "contratado" | "voluntario" | "pendiente";
 }
 
 /** Un botón mejorado que dispara una acción de servidor sobre un chofer usando useTransition para UI optimista. */
@@ -83,7 +84,7 @@ export function CajaClient({
 }) {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
 
   // Filtrado
   const filtrados = filasIniciales.filter((f) => {
@@ -103,12 +104,13 @@ export function CajaClient({
   const totalPages = Math.ceil(filtrados.length / itemsPerPage) || 1;
   const paginados = filtrados.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  // Totales
-  const totalChoferes = filasIniciales.length;
-  const tContratos = filasIniciales.filter((f) => f.contrato_firmado).length;
-  const tVales = filasIniciales.filter((f) => f.vale_entregado).length;
-  const tAnticipos = filasIniciales.filter((f) => f.anticipo_pagado).length;
-  const tPagos = filasIniciales.filter((f) => f.pago_finalizado).length;
+  // Totales (solo contratados)
+  const contratados = filasIniciales.filter((f) => f.estado_servicio === "contratado");
+  const totalChoferes = contratados.length;
+  const tContratos = contratados.filter((f) => f.contrato_firmado).length;
+  const tVales = contratados.filter((f) => f.vale_entregado).length;
+  const tAnticipos = contratados.filter((f) => f.anticipo_pagado).length;
+  const tPagos = contratados.filter((f) => f.pago_finalizado).length;
 
   return (
     <div className="space-y-6">
@@ -169,6 +171,7 @@ export function CajaClient({
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="px-4 py-3 font-semibold min-w-[200px]">Chofer</th>
+                  <th className="px-4 py-3 font-semibold min-w-[100px]">Tipo</th>
                   <th className="px-4 py-3 font-semibold min-w-[140px]">Contrato</th>
                   <th className="px-4 py-3 font-semibold min-w-[140px]">Combustible (Vale)</th>
                   <th className="px-4 py-3 font-semibold min-w-[140px]">Anticipo</th>
@@ -187,14 +190,27 @@ export function CajaClient({
                       </p>
                     </td>
                     <td className="px-4 py-3">
-                      {f.contrato_firmado ? (
+                      {f.estado_servicio === 'voluntario' ? (
+                        <Badge tono="neutro">Voluntario</Badge>
+                      ) : f.estado_servicio === 'pendiente' ? (
+                        <Badge tono="alerta">Pendiente</Badge>
+                      ) : (
+                        <Badge tono="info">Contratado</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {f.estado_servicio === 'voluntario' ? (
+                        <span className="text-xs text-slate-400 font-medium whitespace-nowrap">No aplica</span>
+                      ) : f.contrato_firmado ? (
                         <Badge tono="ok"><span className="flex items-center w-full justify-center"><CheckCircle className="mr-1 h-3 w-3"/> Firmado</span></Badge>
                       ) : (
                         <AccionBoton accion={acciones.firmarContrato} chofer={f.chofer_id} texto="Marcar Firmado" icono={FileText} />
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {f.vale_entregado ? (
+                      {f.estado_servicio === 'voluntario' ? (
+                        <span className="text-xs text-slate-400 font-medium whitespace-nowrap">No aplica</span>
+                      ) : f.vale_entregado ? (
                         <Badge tono="ok"><span className="flex items-center w-full justify-center"><CheckCircle className="mr-1 h-3 w-3"/> Entregado</span></Badge>
                       ) : (
                         <AccionBoton accion={acciones.entregarVale} chofer={f.chofer_id} texto="Entregar Vale" icono={Droplet}
@@ -203,7 +219,9 @@ export function CajaClient({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {f.anticipo_pagado ? (
+                      {f.estado_servicio === 'voluntario' ? (
+                        <span className="text-xs text-slate-400 font-medium whitespace-nowrap">No aplica</span>
+                      ) : f.anticipo_pagado ? (
                         <Badge tono="ok"><span className="flex items-center w-full justify-center"><CheckCircle className="mr-1 h-3 w-3"/> Pagado</span></Badge>
                       ) : (
                         <AccionBoton accion={acciones.pagarAnticipo} chofer={f.chofer_id} texto="Pagar Anticipo" icono={Banknote}
@@ -212,7 +230,9 @@ export function CajaClient({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {f.pago_finalizado ? (
+                      {f.estado_servicio === 'voluntario' ? (
+                        <span className="text-xs text-slate-400 font-medium whitespace-nowrap">No aplica</span>
+                      ) : f.pago_finalizado ? (
                         <Badge tono="ok"><span className="flex items-center w-full justify-center"><CheckCircle className="mr-1 h-3 w-3"/> Finalizado</span></Badge>
                       ) : f.autorizado_por ? (
                         <AccionBoton accion={acciones.marcarPagoFinal} chofer={f.chofer_id} texto="Marcar Pagado" icono={CheckCircle} variant="default" />
@@ -228,36 +248,34 @@ export function CajaClient({
               </tbody>
             </table>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t px-4 py-3 bg-slate-50">
-                <div className="text-xs text-slate-500">
-                  Mostrando {(page - 1) * itemsPerPage + 1} a {Math.min(page * itemsPerPage, filtrados.length)} de {filtrados.length}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="text-sm font-medium text-slate-700">
-                    {page} / {totalPages}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+            <div className="flex items-center justify-between border-t px-4 py-3 bg-slate-50 mt-auto">
+              <div className="text-xs text-slate-500">
+                Mostrando {(page - 1) * itemsPerPage + 1} a {Math.min(page * itemsPerPage, filtrados.length)} de {filtrados.length}
               </div>
-            )}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-sm font-medium text-slate-700">
+                  {page} / {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </Card>

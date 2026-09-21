@@ -11,7 +11,7 @@ export default async function MontosPage() {
   // Obtenemos la elección activa y sus montos configurados
   const { data: eleccion, error: eleccionError } = await supabase
     .from("elecciones")
-    .select("id, monto_combustible, monto_anticipo, monto_pago_final")
+    .select("id, tarifas_vehiculos")
     .eq("estado", "activa")
     .single();
 
@@ -38,7 +38,7 @@ export default async function MontosPage() {
   // Cargamos los registros de la vista v_caja para la elección activa
   const { data, error } = await supabase
     .from("v_caja")
-    .select("candidato, supervisor, barrio, vale_entregado, anticipo_pagado, pago_finalizado")
+    .select("candidato, supervisor, barrio, vale_entregado, anticipo_pagado, pago_finalizado, vehiculo_categoria, estado_servicio")
     .eq("eleccion_id", eleccion.id);
 
   if (error) {
@@ -49,14 +49,8 @@ export default async function MontosPage() {
     );
   }
 
+  // Filas
   const filas = (data ?? []) as any[];
-
-  // Cálculos
-  const totalChoferes = filas.length;
-  
-  const entregadosCombustible = filas.filter(f => f.vale_entregado).length;
-  const pagadosAnticipo = filas.filter(f => f.anticipo_pagado).length;
-  const finalizadosPago = filas.filter(f => f.pago_finalizado).length;
 
   return (
     <div className="space-y-6">
@@ -66,18 +60,8 @@ export default async function MontosPage() {
 
       <MontosClient
         eleccionId={eleccion.id}
-        montos={{
-          combustible: eleccion.monto_combustible ?? 0,
-          anticipo: eleccion.monto_anticipo ?? 0,
-          pagoFinal: eleccion.monto_pago_final ?? 0,
-        }}
-        contadores={{
-          totalChoferes,
-          entregadosCombustible,
-          pagadosAnticipo,
-          finalizadosPago
-        }}
-        choferes={filas}
+        tarifas={eleccion.tarifas_vehiculos || {}}
+        choferesActivos={filas}
       />
     </div>
   );

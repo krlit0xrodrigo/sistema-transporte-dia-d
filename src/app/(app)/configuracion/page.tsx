@@ -33,6 +33,9 @@ export default async function ConfiguracionPage() {
         personas!fk_usuarios_persona ( ci, nombres, apellidos ),
         usuario_roles (
           roles ( codigo, nombre )
+        ),
+        usuario_scopes (
+          candidatos ( nombre_publico )
         )
       `)
       .eq("activo", true) as { data: any[] | null, error: any };
@@ -55,11 +58,18 @@ export default async function ConfiguracionPage() {
       }).map(u => {
         const personas = Array.isArray(u.personas) ? u.personas[0] : u.personas;
         const nombrePersona = personas ? `${personas.nombres || ""} ${personas.apellidos || ""}`.trim() : "";
+        
+        // Extraer candidato si lo tiene
+        const scopes = u.usuario_scopes || [];
+        const scopeCand = scopes.find((s: any) => s.candidatos?.nombre_publico);
+        const candidato = scopeCand ? scopeCand.candidatos.nombre_publico : "-";
+
         return {
           id: u.id,
           ci: personas?.ci || u.email || "",
           nombre: nombrePersona || u.nombre_completo || "Usuario sin nombre",
           roles: (u.usuario_roles || []).map((ur: any) => ur.roles?.nombre).join(", "),
+          candidato: candidato
         };
       });
     }

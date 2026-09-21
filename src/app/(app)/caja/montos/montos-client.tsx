@@ -8,44 +8,65 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Banknote, Droplet, CheckCircle, Calculator, Save, AlertCircle } from "lucide-react";
 
-interface MontosClientProps {
-  eleccionId: string;
-  montos: {
-    combustible: number;
-    anticipo: number;
-    pagoFinal: number;
-  };
-  contadores: {
-    totalChoferes: number;
-    entregadosCombustible: number;
-    pagadosAnticipo: number;
-    finalizadosPago: number;
-  };
-  choferes: any[];
+interface Tarifa {
+  combustible: number;
+  anticipo: number;
+  pago_final: number;
 }
 
-export function MontosClient({ eleccionId, montos, contadores, choferes }: MontosClientProps) {
+interface MontosClientProps {
+  eleccionId: string;
+  tarifas: Record<string, Tarifa>;
+  choferesActivos: any[];
+}
+
+const CATEGORIAS = [
+  { id: "automovil", label: "Automóvil" },
+  { id: "camioneta", label: "Camioneta" },
+  { id: "minibus", label: "Minibús" },
+  { id: "motocicleta", label: "Motocicleta" }
+];
+
+export function MontosClient({ eleccionId, tarifas, choferesActivos }: MontosClientProps) {
   const [isPending, startTransition] = useTransition();
+  const [activeTab, setActiveTab] = useState("automovil");
 
   const formatInput = (val: string) => {
     const numeric = val.replace(/\D/g, "");
     return numeric ? Number(numeric).toLocaleString("es-PY") : "";
   };
 
-  const [combustible, setCombustible] = useState(montos.combustible ? montos.combustible.toLocaleString("es-PY") : "");
-  const [anticipo, setAnticipo] = useState(montos.anticipo ? montos.anticipo.toLocaleString("es-PY") : "");
-  const [pagoFinal, setPagoFinal] = useState(montos.pagoFinal ? montos.pagoFinal.toLocaleString("es-PY") : "");
+  const [tarifasForm, setTarifasForm] = useState<Record<string, Record<string, string>>>(() => {
+    const init: any = {};
+    for (const cat of CATEGORIAS) {
+      init[cat.id] = {
+        combustible: (tarifas[cat.id]?.combustible || 0).toLocaleString("es-PY"),
+        anticipo: (tarifas[cat.id]?.anticipo || 0).toLocaleString("es-PY"),
+        pago_final: (tarifas[cat.id]?.pago_final || 0).toLocaleString("es-PY"),
+      };
+    }
+    return init;
+  });
+
+  const handleChange = (cat: string, field: string, val: string) => {
+    setTarifasForm(prev => ({
+      ...prev,
+      [cat]: {
+        ...prev[cat],
+        [field]: formatInput(val)
+      }
+    }));
+  };
 
   const handleGuardar = (formData: FormData) => {
     startTransition(async () => {
       const res = await guardarMontosCaja(formData);
-      if (res.error) {
+      if (res?.error) {
         alert("Error al guardar: " + res.error);
       }
     });
   };
 
-  // Funciones para formatear moneda
   const formatearMonto = (valor: number) => {
     return new Intl.NumberFormat("es-PY", {
       style: "currency",
@@ -54,22 +75,56 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
     }).format(valor);
   };
 
+  // --- CÁLCULO EN VIVO ---
+  const choferesValidos = choferesActivos.filter(c => c.estado_servicio !== 'voluntario');
+  const totalChoferesValidos = choferesValidos.length;
+
+  let compCombustible = 0, desCombustible = 0, cantCombustible = 0;
+  let compAnticipo = 0, desAnticipo = 0, cantAnticipo = 0;
+  let compPagoFinal = 0, desPagoFinal = 0, cantPagoFinal = 0;
+
+  choferesValidos.forEach(ch => {
+    const cat = ch.vehiculo_categoria || 'automovil';
+    const t = tarifas[cat] || { combustible: 0, anticipo: 0, pago_final: 0 };
+    
+    compCombustible += t.combustible;
+    compAnticipo += t.anticipo;
+    compPagoFinal += t.pago_final;
+
+    if (ch.vale_entregado) {
+      desCombustible += t.combustible;
+      cantCombustible++;
+    }
+    if (ch.anticipo_pagado) {
+      desAnticipo += t.anticipo;
+      cantAnticipo++;
+    }
+    if (ch.pago_finalizado) {
+      desPagoFinal += t.pago_final;
+      cantPagoFinal++;
+    }
+  });
+
+  const totalGeneralComprometido = compCombustible + compAnticipo + compPagoFinal;
+  const totalGeneralDesembolsado = desCombustible + desAnticipo + desPagoFinal;
+
   const agruparPor = (campo: string) => {
-    const agrupado = choferes.reduce((acc, ch) => {
+    const agrupado = choferesValidos.reduce((acc, ch) => {
       const val = ch[campo] || "Sin Asignar";
+      const cat = ch.vehiculo_categoria || 'automovil';
+      const t = tarifas[cat] || { combustible: 0, anticipo: 0, pago_final: 0 };
+
       if (!acc[val]) {
-        acc[val] = {
-          nombre: val,
-          totalChoferes: 0,
-          entregadosCombustible: 0,
-          pagadosAnticipo: 0,
-          finalizadosPago: 0
-        };
+        acc[val] = { nombre: val, totalChoferes: 0, comprometido: 0, desembolsado: 0 };
       }
+      
       acc[val].totalChoferes++;
-      if (ch.vale_entregado) acc[val].entregadosCombustible++;
-      if (ch.anticipo_pagado) acc[val].pagadosAnticipo++;
-      if (ch.pago_finalizado) acc[val].finalizadosPago++;
+      acc[val].comprometido += t.combustible + t.anticipo + t.pago_final;
+      
+      if (ch.vale_entregado) acc[val].desembolsado += t.combustible;
+      if (ch.anticipo_pagado) acc[val].desembolsado += t.anticipo;
+      if (ch.pago_finalizado) acc[val].desembolsado += t.pago_final;
+
       return acc;
     }, {} as Record<string, any>);
     return Object.values(agrupado).sort((a: any, b: any) => b.totalChoferes - a.totalChoferes);
@@ -91,20 +146,14 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {datos.map((d, i) => {
-              const comprometido = d.totalChoferes * (montos.combustible + montos.anticipo + montos.pagoFinal);
-              const desembolsado = (d.entregadosCombustible * montos.combustible) + 
-                                   (d.pagadosAnticipo * montos.anticipo) + 
-                                   (d.finalizadosPago * montos.pagoFinal);
-              return (
-                <tr key={i} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-4 py-3 font-medium text-slate-900">{d.nombre}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-600">{d.totalChoferes}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatearMonto(comprometido)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-600">{formatearMonto(desembolsado)}</td>
-                </tr>
-              );
-            })}
+            {datos.map((d, i) => (
+              <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                <td className="px-4 py-3 font-medium text-slate-900">{d.nombre}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-slate-600">{d.totalChoferes}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatearMonto(d.comprometido)}</td>
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-600">{formatearMonto(d.desembolsado)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -112,7 +161,7 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
   );
 
   return (
-    <div className="grid gap-6 md:grid-cols-[300px_1fr]">
+    <div className="grid gap-6 md:grid-cols-[300px_1fr] lg:grid-cols-[350px_1fr]">
       
       {/* Panel Izquierdo: Configuración */}
       <Card className="h-fit">
@@ -122,51 +171,78 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
             <h2 className="text-sm font-semibold tracking-tight">Asignar Montos</h2>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Definí la tarifa global para todos los choferes en esta elección.
+            Definí las tarifas por cada tipo de vehículo en esta elección.
           </p>
         </CardHeader>
         <div className="p-4">
-          <form action={handleGuardar} className="space-y-4">
+          <form action={handleGuardar} className="space-y-6">
             <input type="hidden" name="eleccion_id" value={eleccionId} />
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-600">Combustible (Gs)</Label>
-              <input type="hidden" name="monto_combustible" value={combustible.replace(/\D/g, "")} />
-              <Input 
-                type="text" 
-                value={combustible}
-                onChange={(e) => setCombustible(formatInput(e.target.value))}
-                placeholder="Ej. 100.000"
-                className="text-right tabular-nums font-medium" 
-              />
+            <div className="flex flex-wrap gap-1 border-b border-slate-200 mb-4 pb-1">
+              {CATEGORIAS.map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveTab(cat.id)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-t-md border-b-2 transition-colors flex-1 text-center ${
+                    activeTab === cat.id 
+                      ? 'border-primary text-primary bg-primary/5' 
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-600">Anticipo (Gs)</Label>
-              <input type="hidden" name="monto_anticipo" value={anticipo.replace(/\D/g, "")} />
-              <Input 
-                type="text" 
-                value={anticipo}
-                onChange={(e) => setAnticipo(formatInput(e.target.value))}
-                placeholder="Ej. 50.000"
-                className="text-right tabular-nums font-medium" 
-              />
-            </div>
+            {CATEGORIAS.map((cat) => (
+              <div key={cat.id} className={activeTab === cat.id ? "space-y-3" : "hidden"}>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 items-center gap-2">
+                    <Label className="text-[11px] font-medium text-slate-500">Combustible</Label>
+                    <div className="col-span-2">
+                      <input type="hidden" name={`${cat.id}_combustible`} value={tarifasForm[cat.id].combustible.replace(/\D/g, "")} />
+                      <Input 
+                        type="text" 
+                        value={tarifasForm[cat.id].combustible}
+                        onChange={(e) => handleChange(cat.id, "combustible", e.target.value)}
+                        placeholder="0"
+                        className="h-8 text-right tabular-nums font-medium text-xs bg-white" 
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 items-center gap-2">
+                    <Label className="text-[11px] font-medium text-slate-500">Anticipo</Label>
+                    <div className="col-span-2">
+                      <input type="hidden" name={`${cat.id}_anticipo`} value={tarifasForm[cat.id].anticipo.replace(/\D/g, "")} />
+                      <Input 
+                        type="text" 
+                        value={tarifasForm[cat.id].anticipo}
+                        onChange={(e) => handleChange(cat.id, "anticipo", e.target.value)}
+                        placeholder="0"
+                        className="h-8 text-right tabular-nums font-medium text-xs bg-white" 
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 items-center gap-2">
+                    <Label className="text-[11px] font-medium text-slate-500">Pago Final</Label>
+                    <div className="col-span-2">
+                      <input type="hidden" name={`${cat.id}_pago_final`} value={tarifasForm[cat.id].pago_final.replace(/\D/g, "")} />
+                      <Input 
+                        type="text" 
+                        value={tarifasForm[cat.id].pago_final}
+                        onChange={(e) => handleChange(cat.id, "pago_final", e.target.value)}
+                        placeholder="0"
+                        className="h-8 text-right tabular-nums font-medium text-xs bg-white" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-slate-600">Pago Final (Gs)</Label>
-              <input type="hidden" name="monto_pago_final" value={pagoFinal.replace(/\D/g, "")} />
-              <Input 
-                type="text" 
-                value={pagoFinal}
-                onChange={(e) => setPagoFinal(formatInput(e.target.value))}
-                placeholder="Ej. 150.000"
-                className="text-right tabular-nums font-medium" 
-              />
-            </div>
-
-            <div className="pt-2">
-              <Button type="submit" disabled={isPending} className="w-full">
+            <div className="pt-4 sticky bottom-4">
+              <Button type="submit" disabled={isPending} className="w-full shadow-md">
                 <Save className="mr-2 h-4 w-4" />
                 {isPending ? "Guardando..." : "Guardar Montos"}
               </Button>
@@ -181,7 +257,7 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800 leading-relaxed">
-            <strong>Cálculo en vivo:</strong> El monto <em>comprometido</em> se calcula asumiendo que los <strong>{contadores.totalChoferes} choferes activos</strong> van a cobrar el 100% de la tarifa asignada. El monto <em>desembolsado</em> representa lo que ya fue pagado físicamente.
+            <strong>Cálculo en vivo:</strong> El monto <em>comprometido</em> se calcula asumiendo que los <strong>{totalChoferesValidos} choferes activos (excluyendo voluntarios)</strong> van a cobrar el 100% de la tarifa asignada según su tipo de vehículo. El monto <em>desembolsado</em> representa lo que ya fue pagado físicamente.
           </div>
         </div>
 
@@ -194,16 +270,16 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
             </CardHeader>
             <div className="p-4 space-y-4">
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Desembolsado ({contadores.entregadosCombustible})</p>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Desembolsado ({cantCombustible})</p>
                 <p className="text-2xl font-bold text-slate-900 tabular-nums">
-                  {formatearMonto(contadores.entregadosCombustible * montos.combustible)}
+                  {formatearMonto(desCombustible)}
                 </p>
               </div>
               <div className="h-px bg-slate-100" />
               <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Comprometido ({contadores.totalChoferes})</p>
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Comprometido</p>
                 <p className="text-lg font-semibold text-slate-600 tabular-nums">
-                  {formatearMonto(contadores.totalChoferes * montos.combustible)}
+                  {formatearMonto(compCombustible)}
                 </p>
               </div>
             </div>
@@ -217,16 +293,16 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
             </CardHeader>
             <div className="p-4 space-y-4">
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Desembolsado ({contadores.pagadosAnticipo})</p>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Desembolsado ({cantAnticipo})</p>
                 <p className="text-2xl font-bold text-slate-900 tabular-nums">
-                  {formatearMonto(contadores.pagadosAnticipo * montos.anticipo)}
+                  {formatearMonto(desAnticipo)}
                 </p>
               </div>
               <div className="h-px bg-slate-100" />
               <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Comprometido ({contadores.totalChoferes})</p>
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Comprometido</p>
                 <p className="text-lg font-semibold text-slate-600 tabular-nums">
-                  {formatearMonto(contadores.totalChoferes * montos.anticipo)}
+                  {formatearMonto(compAnticipo)}
                 </p>
               </div>
             </div>
@@ -240,16 +316,16 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
             </CardHeader>
             <div className="p-4 space-y-4">
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Desembolsado ({contadores.finalizadosPago})</p>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Desembolsado ({cantPagoFinal})</p>
                 <p className="text-2xl font-bold text-slate-900 tabular-nums">
-                  {formatearMonto(contadores.finalizadosPago * montos.pagoFinal)}
+                  {formatearMonto(desPagoFinal)}
                 </p>
               </div>
               <div className="h-px bg-slate-100" />
               <div>
-                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Comprometido ({contadores.totalChoferes})</p>
+                <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Comprometido</p>
                 <p className="text-lg font-semibold text-slate-600 tabular-nums">
-                  {formatearMonto(contadores.totalChoferes * montos.pagoFinal)}
+                  {formatearMonto(compPagoFinal)}
                 </p>
               </div>
             </div>
@@ -257,25 +333,17 @@ export function MontosClient({ eleccionId, montos, contadores, choferes }: Monto
         </div>
 
         <Card className="bg-slate-900 text-white">
-          <div className="p-5 flex items-center justify-between">
+          <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-1">Total General Comprometido</p>
+              <p className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-1">Total Comprometido</p>
               <p className="text-3xl font-bold tabular-nums">
-                {formatearMonto(
-                  (contadores.totalChoferes * montos.combustible) +
-                  (contadores.totalChoferes * montos.anticipo) +
-                  (contadores.totalChoferes * montos.pagoFinal)
-                )}
+                {formatearMonto(totalGeneralComprometido)}
               </p>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right">
               <p className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-1">Total Desembolsado</p>
               <p className="text-3xl font-bold text-emerald-400 tabular-nums">
-                {formatearMonto(
-                  (contadores.entregadosCombustible * montos.combustible) +
-                  (contadores.pagadosAnticipo * montos.anticipo) +
-                  (contadores.finalizadosPago * montos.pagoFinal)
-                )}
+                {formatearMonto(totalGeneralDesembolsado)}
               </p>
             </div>
           </div>

@@ -160,7 +160,7 @@ export default async function Tablero() {
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard valor={choferes ?? 0} etiqueta="Choferes activos" icon={Users} href="/choferes" />
+        <StatCard valor={choferes ?? 0} etiqueta="Choferes activos" icon={Users} href="/choferes/resumen" />
         <StatCard valor={verificados ?? 0} etiqueta="Padrón cruzado" detalle="Nuevos choferes verificados" icon={CheckCircle} href="/consulta" />
         <StatCard valor={conflictos ?? 0} etiqueta="Filas en conflicto" detalle="En proceso de importación" icon={AlertTriangle} />
       </div>

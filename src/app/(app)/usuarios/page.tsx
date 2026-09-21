@@ -52,6 +52,10 @@ export default async function UsuariosPage() {
     .select("id, nombre, codigo")
     .order("nivel", { ascending: false });
 
+  // Excluir roles que ya no se utilizarán en el operativo
+  const rolesOcultos = ["admin", "coordinador", "operador", "auditor"];
+  const rolesDisponibles = (rolesData || []).filter(r => !rolesOcultos.includes(r.codigo));
+
   // Cargar candidatos disponibles para el selector
   const { data: candidatosData } = await supabase
     .from("candidatos")
@@ -62,7 +66,7 @@ export default async function UsuariosPage() {
   return (
     <UsuariosClient 
       usuarios={usuarios} 
-      roles={rolesData || []} 
+      roles={rolesDisponibles} 
       candidatos={candidatosData || []}
     />
   );

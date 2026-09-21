@@ -9,6 +9,7 @@ type Usuario = {
   ci: string;
   nombre: string;
   roles: string;
+  candidato?: string;
 };
 
 interface Props {
@@ -59,6 +60,7 @@ export function BloqueoAltaClient({ usuarios, bloqueados, onChange }: Props) {
             <tr>
               <th className="px-4 py-2 font-medium">Cédula</th>
               <th className="px-4 py-2 font-medium">Nombre Completo</th>
+              <th className="px-4 py-2 font-medium">Candidato</th>
               <th className="px-4 py-2 font-medium">Roles</th>
               <th className="px-4 py-2 font-medium text-right">Permiso Alta</th>
             </tr>
@@ -70,6 +72,7 @@ export function BloqueoAltaClient({ usuarios, bloqueados, onChange }: Props) {
                 <tr key={u.id} className={bloqueado ? "bg-rose-50/50" : ""}>
                   <td className="px-4 py-3 tabular-nums text-slate-600">{formatearCI(u.ci)}</td>
                   <td className="px-4 py-3 font-medium text-slate-900">{u.nombre}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 font-medium">{u.candidato || "-"}</td>
                   <td className="px-4 py-3 text-xs text-slate-500">{u.roles}</td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -94,7 +97,7 @@ export function BloqueoAltaClient({ usuarios, bloqueados, onChange }: Props) {
             })}
             {filtrados.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                   No se encontraron usuarios.
                 </td>
               </tr>
