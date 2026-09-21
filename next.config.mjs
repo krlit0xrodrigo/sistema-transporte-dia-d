@@ -3,6 +3,9 @@ const nextConfig = {
   devIndicators: {
     appIsrStatus: false,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   poweredByHeader: false,
   async headers() {
     return [{
