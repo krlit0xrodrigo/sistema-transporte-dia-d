@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/server";
 import { altaChoferSchema, traducirErrorServidor } from "@/lib/schemas/alta-chofer";
+import { TraccarService } from "@/lib/services/traccar-service";
 
 export interface AltaResult {
   ok: boolean;
@@ -72,6 +73,36 @@ export async function altaChofer(formData: FormData): Promise<AltaResult> {
   }
 
   const resultado = data as { chofer_id: string };
+
+  // Sincronizar con Traccar de forma no bloqueante (esperamos a que termine pero capturamos errores dentro del servicio)
+  try {
+    const [{ data: candidatoInfo }, { data: supervisorInfo }, { data: barrioInfo }] = await Promise.all([
+      d.candidato_id ? supabase.from("candidatos").select("nombre_publico").eq("id", d.candidato_id).maybeSingle() : Promise.resolve({ data: null }),
+      d.supervisor_id ? supabase.from("supervisores").select("alias").eq("id", d.supervisor_id).maybeSingle() : Promise.resolve({ data: null }),
+      d.barrio_id ? supabase.from("barrios").select("nombre").eq("id", d.barrio_id).maybeSingle() : Promise.resolve({ data: null }),
+    ]);
+
+    await TraccarService.syncChofer(
+      { 
+        ci: d.ci, 
+        nombres: d.nombres, 
+        apellidos: d.apellidos, 
+        chapa: d.chapa,
+        telefono: d.telefono,
+        marca: d.marca,
+        modelo: d.modelo,
+        categoria: d.categoria
+      },
+      {
+        candidatoNombre: candidatoInfo?.nombre_publico,
+        supervisorNombre: supervisorInfo?.alias,
+        barrioNombre: barrioInfo?.nombre,
+      }
+    );
+  } catch (syncErr) {
+    console.error("Error inesperado en sincronización de Traccar:", syncErr);
+  }
+
   redirect(`/choferes/${resultado.chofer_id}`);
 }
 
