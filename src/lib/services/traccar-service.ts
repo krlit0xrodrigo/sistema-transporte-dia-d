@@ -22,7 +22,7 @@ export class TraccarService {
     return process.env.TRACCAR_API_URL || 'https://chofer.equipombarete.com/api';
   }
 
-  private static get headers() {
+  private static get headers(): Record<string, string> {
     const token = process.env.TRACCAR_API_TOKEN;
     if (token) {
       return {
@@ -52,7 +52,7 @@ export class TraccarService {
       ...options,
       headers: {
         ...this.headers,
-        ...(options.headers || {}),
+        ...(options.headers as Record<string, string> || {}),
       },
     });
 
@@ -69,7 +69,7 @@ export class TraccarService {
 
     // Algunos endpoints como PUT/DELETE o incluso POST pueden devolver vacío
     const text = await res.text();
-    return text ? JSON.parse(text) : null;
+    return text ? JSON.parse(text) : (null as unknown as T);
   }
 
   /**
