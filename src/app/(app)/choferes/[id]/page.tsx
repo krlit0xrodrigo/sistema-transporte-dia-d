@@ -5,6 +5,7 @@ import {
   Aviso, Badge, BotonEnlace, Card, CardHeader, Dato, Titulo, Vacio,
 } from "@/components/ui";
 import { EditarAsignacion } from "./editar-asignacion";
+import { BotonBaja } from "./boton-baja";
 import { AlertTriangle, Plus } from "lucide-react";
 import {
   ETIQUETA_ACTIVIDAD, ETIQUETA_IDENTIDAD,
@@ -117,7 +118,9 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
                 ? <BotonEnlace href={`/choferes/nuevo?ci=${encodeURIComponent(c.ci)}`}>
                     Dar de alta en el operativo actual
                   </BotonEnlace>
-                : undefined
+                : enOperativoActual
+                  ? <BotonBaja choferId={id} />
+                  : undefined
             }
           >
             {c.nombre_completo}

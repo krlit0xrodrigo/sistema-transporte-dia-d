@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Boton } from "@/components/ui";
 import { Search, UserPlus, Users, MapPin, Edit2, AlertCircle } from "lucide-react";
+import { Paginacion } from "@/components/ui/pagination";
+import { useEffect } from "react";
 
 type Candidato = { id: string; nombre: string; cupo: number };
 type Supervisor = { id: string; alias: string; candidato_id: string; cupo: number };
@@ -30,7 +32,31 @@ export function EstructuraClient({ eleccionId, candidatos, supervisores, barrios
   const [supervisorEdit, setSupervisorEdit] = useState<Partial<Supervisor> | null>(null);
   const [barrioEdit, setBarrioEdit] = useState<Partial<Barrio> | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
   const termino = busqueda.toLowerCase();
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tab, busqueda]);
+
+  const pageSize = 10;
+
+  const candidatosFiltrados = candidatos.filter(c => c.nombre.toLowerCase().includes(termino));
+  const supervisoresFiltrados = supervisores.filter(s => s.alias.toLowerCase().includes(termino));
+  const barriosFiltrados = barrios.filter(b => b.nombre.toLowerCase().includes(termino));
+
+  let currentListLength = 0;
+  if (tab === "candidatos") currentListLength = candidatosFiltrados.length;
+  else if (tab === "supervisores") currentListLength = supervisoresFiltrados.length;
+  else if (tab === "barrios") currentListLength = barriosFiltrados.length;
+
+  const totalPages = Math.ceil(currentListLength / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+
+  const candidatosPaginados = candidatosFiltrados.slice(startIndex, endIndex);
+  const supervisoresPaginados = supervisoresFiltrados.slice(startIndex, endIndex);
+  const barriosPaginados = barriosFiltrados.slice(startIndex, endIndex);
 
   const handleGuardarCandidato = (formData: FormData) => {
     startTransition(async () => {
@@ -104,7 +130,7 @@ export function EstructuraClient({ eleccionId, candidatos, supervisores, barrios
               <tbody className="divide-y">
                 
                 {tab === "candidatos" && (
-                  candidatos.filter(c => c.nombre.toLowerCase().includes(termino)).map(c => (
+                  candidatosPaginados.map(c => (
                     <tr key={c.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 font-medium">{c.nombre}</td>
                       <td className="px-4 py-3 text-right font-semibold text-blue-600">{c.cupo}</td>
@@ -118,7 +144,7 @@ export function EstructuraClient({ eleccionId, candidatos, supervisores, barrios
                 )}
             {tab === "barrios" && barrios.length === 0 && <p className="p-4 text-center text-slate-500">No hay barrios cargados.</p>}
                 {tab === "supervisores" && (
-                  supervisores.filter(s => s.alias.toLowerCase().includes(termino)).map(s => (
+                  supervisoresPaginados.map(s => (
                     <tr key={s.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 font-medium">{s.alias}</td>
                       <td className="px-4 py-3 text-slate-500">
@@ -135,7 +161,7 @@ export function EstructuraClient({ eleccionId, candidatos, supervisores, barrios
                 )}
 
                 {tab === "barrios" && (
-                  barrios.filter(b => b.nombre.toLowerCase().includes(termino)).map(b => (
+                  barriosPaginados.map(b => (
                     <tr key={b.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 font-medium">{b.nombre}</td>
                       <td className="px-4 py-3 text-right font-semibold text-indigo-600">{b.cupo}</td>
@@ -152,8 +178,22 @@ export function EstructuraClient({ eleccionId, candidatos, supervisores, barrios
             </table>
             
             {/* Vacío */}
-            {tab === "candidatos" && candidatos.length === 0 && <p className="p-4 text-center text-slate-500">No hay candidatos cargados.</p>}
-            {tab === "supervisores" && supervisores.length === 0 && <p className="p-4 text-center text-slate-500">No hay supervisores cargados.</p>}
+            {tab === "candidatos" && candidatosFiltrados.length === 0 && <p className="p-4 text-center text-slate-500">No se encontraron candidatos.</p>}
+            {tab === "supervisores" && supervisoresFiltrados.length === 0 && <p className="p-4 text-center text-slate-500">No se encontraron supervisores.</p>}
+
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center px-4 py-3 border-t">
+                <span className="text-sm text-slate-500">
+                  Mostrando {startIndex + 1} a {Math.min(endIndex, currentListLength)} de {currentListLength}
+                </span>
+                <Paginacion
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
           </div>
         </Card>
 

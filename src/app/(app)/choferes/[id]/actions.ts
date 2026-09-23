@@ -34,3 +34,28 @@ export async function editarAsignacion(
   revalidatePath(`/choferes/${chofer_id}`);
   return { ok: true };
 }
+
+export async function darDeBajaChofer(
+  chofer_id: string,
+  motivo: string
+) {
+  const supabase = await crearClienteServidor();
+
+  // El sistema registra todo internamente. Al fallar un RLS por no tener permiso (choferes.baja),
+  // supabase devolverá error, lo cual es seguro.
+  const { error } = await supabase.rpc("fn_baja_chofer", {
+    p_chofer_id: chofer_id,
+    p_motivo: motivo,
+  });
+
+  if (error) {
+    console.error("Error al dar de baja al chofer:", error);
+    return { ok: false, error: error.message };
+  }
+
+  // Refrescar el caché
+  revalidatePath(`/choferes`);
+  revalidatePath(`/choferes/${chofer_id}`);
+  
+  return { ok: true };
+}
