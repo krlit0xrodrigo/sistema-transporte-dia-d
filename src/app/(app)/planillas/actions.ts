@@ -43,6 +43,7 @@ export async function obtenerChoferesParaPlanilla(candidatoId: string) {
       id,
       numero_orden,
       estado,
+      estado_servicio,
       personas (
         ci,
         nombres,
@@ -76,6 +77,7 @@ export async function obtenerChoferesParaPlanilla(candidatoId: string) {
     ci: c.personas?.ci || "",
     nombre_completo: `${c.personas?.nombres || ""} ${c.personas?.apellidos || ""}`.trim(),
     estado: c.estado,
+    estado_servicio: c.estado_servicio,
     // Extraemos supervisor y barrio del array de asignaciones (solo debería haber uno activo por chofer, pero Supabase devuelve un array para foreign keys a menos que se fuerce, en este caso asignaciones es un 1 to Many relation en la DB, pero lógico es 1 a 1 por chofer activo)
     // Actually, asignaciones is an array if we query from choferes, because choferes->asignaciones is 1-to-many.
     supervisor: Array.isArray(c.asignaciones) 
