@@ -99,12 +99,12 @@ export function PlanillasClient({ candidatos }: { candidatos: any[] }) {
                     <h1 className="text-2xl font-bold uppercase tracking-wider border-b-2 border-black pb-2 inline-block">
                       Planilla de Control de Choferes
                     </h1>
-                    <div className="mt-4 flex justify-between text-left border border-black p-4 bg-gray-50 print:bg-transparent">
-                      <div>
+                    <div className="mt-4 border border-black p-4 bg-gray-50 print:bg-transparent" style={{ display: 'table', width: '100%' }}>
+                      <div className="text-left" style={{ display: 'table-cell', width: '50%' }}>
                         <p><span className="font-bold">CANDIDATO RESPONSABLE:</span> {candidatoSeleccionado?.nombre_publico}</p>
                         <p><span className="font-bold">TOTAL CHOFERES:</span> {choferes.length}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right" style={{ display: 'table-cell', width: '50%' }}>
                         <p><span className="font-bold">FECHA:</span> ____ / ____ / ________</p>
                         <p><span className="font-bold">ENCARGADO:</span> ___________________</p>
                       </div>
@@ -161,7 +161,8 @@ export function PlanillasClient({ candidatos }: { candidatos: any[] }) {
               /* Ocultar barra lateral y menús de la aplicación entera */
               nav, aside, header, [data-sidebar="sidebar"], #sidebar { display: none !important; }
               /* Expandir el contenido al 100% y quitar restricciones de altura */
-              main, #__next, .flex-1, .h-screen, .overflow-hidden { 
+              main, #__next, .flex-1, .h-screen, .overflow-hidden, .overflow-y-auto, .max-w-7xl, body > div { 
+                display: block !important;
                 height: auto !important;
                 min-height: auto !important;
                 overflow: visible !important;
