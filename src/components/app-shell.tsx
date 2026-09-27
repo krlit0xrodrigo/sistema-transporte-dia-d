@@ -45,7 +45,7 @@ export function AppShell({ permisos, usuario, children }: AppShellProps) {
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Mobile header */}
-        <header className="flex h-14 items-center gap-3 border-b bg-background px-4 lg:hidden" data-no-print>
+        <header className="flex h-14 items-center gap-3 border-b bg-background px-4 lg:hidden print:hidden" data-no-print>
           <MobileSidebar
             permisos={permisosSet}
             usuario={usuario}
@@ -79,7 +79,7 @@ export function AppShell({ permisos, usuario, children }: AppShellProps) {
         </main>
 
         {/* Footer */}
-        <footer className="border-t bg-background px-4 py-3" data-no-print>
+        <footer className="border-t bg-background px-4 py-3 print:hidden" data-no-print>
           <p className="text-center text-[11px] text-muted-foreground">
             Día D · domingo 4 de octubre de 2026 · Villa Hayes, Presidente Hayes
           </p>

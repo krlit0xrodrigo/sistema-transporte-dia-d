@@ -160,17 +160,16 @@ export function PlanillasClient({ candidatos }: { candidatos: any[] }) {
               }
               /* Ocultar barra lateral y menús de la aplicación entera */
               nav, aside, header, [data-sidebar="sidebar"], #sidebar { display: none !important; }
+              
               /* Expandir el contenido al 100% y quitar restricciones de altura */
-              main, #__next, .flex-1, .h-screen, .overflow-hidden, .overflow-y-auto, .max-w-7xl, body > div { 
-                display: block !important;
+              body, html, main, #__next, body > div, .overflow-y-auto { 
                 height: auto !important;
                 min-height: auto !important;
                 overflow: visible !important;
                 margin: 0 !important; 
                 padding: 0 !important; 
-                width: 100% !important; 
-                max-width: 100% !important; 
               }
+              main { display: block !important; width: 100% !important; max-width: 100% !important; }
               /* Forzar salto de página y evitar que se corte la tabla */
               table { page-break-inside: auto; }
               tr { page-break-inside: avoid; page-break-after: auto; }

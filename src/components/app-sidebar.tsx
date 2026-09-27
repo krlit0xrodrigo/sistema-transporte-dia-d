@@ -283,7 +283,7 @@ export function AppSidebar(props: SidebarProps) {
       <aside
         data-sidebar
         className={cn(
-          "hidden h-screen flex-col border-r bg-sidebar transition-all duration-200 lg:flex",
+          "hidden h-screen flex-col border-r bg-sidebar transition-all duration-200 lg:flex print:hidden",
           collapsed ? "w-[60px]" : "w-[240px]",
         )}
       >
