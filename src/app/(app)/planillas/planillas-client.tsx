@@ -159,17 +159,21 @@ export function PlanillasClient({ candidatos }: { candidatos: any[] }) {
                 position: static !important;
               }
               /* Ocultar barra lateral y menús de la aplicación entera */
-              nav, aside, header, [data-sidebar="sidebar"], #sidebar { display: none !important; }
+              nav, aside, header, [data-sidebar="sidebar"], #sidebar, .print\\:hidden { display: none !important; }
               
-              /* Expandir el contenido al 100% y quitar restricciones de altura */
-              body, html, main, #__next, body > div, .overflow-y-auto { 
+              /* Expandir el contenido al 100% y quitar restricciones de altura en TODOS los contenedores */
+              body, html, main, #__next, div, section, article { 
                 height: auto !important;
+                max-height: none !important;
                 min-height: auto !important;
                 overflow: visible !important;
-                margin: 0 !important; 
-                padding: 0 !important; 
               }
-              main { display: block !important; width: 100% !important; max-width: 100% !important; }
+              
+              /* Evitar que flexbox corte el contenido paginado en Chrome */
+              body, html, #__next, main { display: block !important; }
+              
+              /* Ajustes de ancho */
+              main { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
               /* Forzar salto de página y evitar que se corte la tabla */
               table { page-break-inside: auto; }
               tr { page-break-inside: avoid; page-break-after: auto; }
