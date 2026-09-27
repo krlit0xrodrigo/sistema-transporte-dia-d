@@ -21,7 +21,7 @@ export default async function PlanillasPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between print:hidden">
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900">Planillas de Firma</h2>
             <p className="text-sm text-slate-500">
