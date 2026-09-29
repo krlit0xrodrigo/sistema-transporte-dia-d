@@ -22,54 +22,80 @@ export class TraccarService {
     return process.env.TRACCAR_API_URL || 'https://chofer.equipombarete.com/api';
   }
 
-  private static get headers(): Record<string, string> {
+  /**
+   * Devuelve las estrategias de autenticación disponibles, en orden de prioridad.
+   * Si el token expira, el fallback a Basic garantiza que la sincronización no se rompa.
+   */
+  private static get authStrategies(): Array<Record<string, string>> {
+    const strategies: Array<Record<string, string>> = [];
+
     const token = process.env.TRACCAR_API_TOKEN;
     if (token) {
-      return {
+      strategies.push({
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-      };
+      });
     }
-    
+
     const username = process.env.TRACCAR_USERNAME;
     const password = process.env.TRACCAR_PASSWORD;
     if (username && password) {
       const basic = Buffer.from(`${username}:${password}`).toString('base64');
-      return {
+      strategies.push({
         'Authorization': `Basic ${basic}`,
         'Content-Type': 'application/json',
-      };
+      });
     }
 
-    console.warn("TraccarService: Faltan credenciales (TRACCAR_API_TOKEN o TRACCAR_USERNAME/PASSWORD) en el entorno.");
-    return { 'Content-Type': 'application/json' };
+    if (strategies.length === 0) {
+      console.warn("TraccarService: Faltan credenciales (TRACCAR_API_TOKEN o TRACCAR_USERNAME/PASSWORD) en el entorno.");
+    }
+
+    return strategies;
   }
 
   private static async fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        ...this.headers,
-        ...(options.headers as Record<string, string> || {}),
-      },
-    });
+    const strategies = this.authStrategies;
 
-    if (!res.ok) {
-      let errorMsg = `Traccar API Error ${res.status} en ${endpoint}`;
-      try {
-        const text = await res.text();
-        errorMsg += `: ${text}`;
-      } catch (e) {
-        // Ignorar
-      }
-      throw new Error(errorMsg);
+    if (strategies.length === 0) {
+      throw new Error("TraccarService: Sin credenciales configuradas.");
     }
 
-    // Algunos endpoints como PUT/DELETE o incluso POST pueden devolver vacío
-    const text = await res.text();
-    return text ? JSON.parse(text) : (null as unknown as T);
+    let lastError: Error | null = null;
+
+    for (const authHeaders of strategies) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          ...authHeaders,
+          ...(options.headers as Record<string, string> || {}),
+        },
+      });
+
+      // Si es 401 y hay otra estrategia, intentar la siguiente
+      if (res.status === 401 && strategies.indexOf(authHeaders) < strategies.length - 1) {
+        console.warn(`TraccarService: Auth falló (401) con ${authHeaders['Authorization']?.split(' ')[0]}, intentando siguiente...`);
+        continue;
+      }
+
+      if (!res.ok) {
+        let errorMsg = `Traccar API Error ${res.status} en ${endpoint}`;
+        try {
+          const text = await res.text();
+          errorMsg += `: ${text}`;
+        } catch (e) {
+          // Ignorar
+        }
+        throw new Error(errorMsg);
+      }
+
+      // Algunos endpoints como PUT/DELETE o incluso POST pueden devolver vacío
+      const text = await res.text();
+      return text ? JSON.parse(text) : (null as unknown as T);
+    }
+
+    throw lastError || new Error("TraccarService: Todas las estrategias de autenticación fallaron.");
   }
 
   /**
