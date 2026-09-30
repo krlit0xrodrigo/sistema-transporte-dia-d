@@ -212,7 +212,7 @@ export class TraccarService {
     jerarquia: { candidatoNombre?: string; supervisorNombre?: string; barrioNombre?: string }
   ): Promise<void> {
     try {
-      if (!process.env.TRACCAR_API_TOKEN && !(process.env.TRACCAR_USERNAME && process.env.TRACCAR_PASSWORD)) {
+      if (this.authStrategies.length === 0) {
         console.warn("TraccarService: Sincronización saltada. No hay credenciales configuradas.");
         return;
       }
