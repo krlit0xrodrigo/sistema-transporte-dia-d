@@ -177,7 +177,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
                 {c.responsable_tipo && <span className="text-tinta-tenue"> · {c.responsable_tipo}</span>}
               </Dato>
               <Dato etiqueta="Estado de servicio"><Badge>{c.estado_servicio}</Badge></Dato>
-              <Dato etiqueta="Vehículo">{c.chapa ? `${c.chapa} · ${c.categoria ?? ""}` : "—"}</Dato>
+              <Dato etiqueta="Vehículo">{c.chapa ? `${c.chapa} · ${c.categoria ?? ""}` : c.categoria ?? "—"}</Dato>
               <Dato etiqueta="GPS vinculado">
                 {gps?.estado ? <Badge>{gps.estado}</Badge> : <span className="text-tinta-tenue">No</span>}
               </Dato>
