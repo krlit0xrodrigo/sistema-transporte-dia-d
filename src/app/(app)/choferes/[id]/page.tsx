@@ -75,11 +75,11 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
       .eq("persona_id", c.persona_id).neq("chofer_id", id),
     // Estado del GPS vinculado
     supabase.from("dispositivos_gps").select("estado").eq("chofer_id", id).maybeSingle(),
-    // Datos para edición (sólo los que tienen cupo en la elección actual)
+    // Datos para edición
     supabase.from("asignaciones").select("candidato_id, supervisor_id, barrio_id").eq("chofer_id", id).is("vigente_hasta", null).maybeSingle(),
-    supabase.from("candidatos").select("id, nombre_publico, cupos!inner(eleccion_id, ambito)").eq("cupos.eleccion_id", c.eleccion_id).eq("cupos.ambito", "candidato"),
-    supabase.from("supervisores").select("id, alias, cupos!inner(eleccion_id, ambito)").eq("cupos.eleccion_id", c.eleccion_id).eq("cupos.ambito", "supervisor"),
-    supabase.from("barrios").select("id, nombre, cupos!inner(eleccion_id, ambito)").eq("cupos.eleccion_id", c.eleccion_id).eq("cupos.ambito", "barrio"),
+    supabase.from("candidatos").select("id, nombre_publico").eq("activo", true).order("nombre_publico"),
+    supabase.from("supervisores").select("id, alias, candidato_id").eq("activo", true).order("alias"),
+    supabase.from("barrios").select("id, nombre").eq("activo", true).order("nombre"),
   ]);
 
   const padron = (Array.isArray(padronRaw) ? padronRaw[0] : padronRaw) as ResultadoPadron | undefined;

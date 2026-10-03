@@ -21,13 +21,18 @@ export function EditarAsignacion({
   barrioId: string | null;
   estadoServicio: string;
   candidatos: { id: string; nombre_publico: string }[];
-  supervisores: { id: string; alias: string }[];
+  supervisores: { id: string; alias: string; candidato_id?: string | null }[];
   barrios: { id: string; nombre: string }[];
 }) {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const [candidatoSel, setCandidatoSel] = useState(candidatoId);
+
+  const supervisoresFiltrados = supervisores.filter(
+    (s) => !s.candidato_id || !candidatoSel || s.candidato_id === candidatoSel
+  );
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -78,7 +83,8 @@ export function EditarAsignacion({
             name="candidato_id"
             id="candidato_id"
             className={claseInput}
-            defaultValue={candidatoId}
+            value={candidatoSel}
+            onChange={(e) => setCandidatoSel(e.target.value)}
             required
           >
             <option value="">Seleccione un candidato</option>
@@ -99,7 +105,7 @@ export function EditarAsignacion({
               defaultValue={supervisorId || ""}
             >
               <option value="">(Ninguno)</option>
-              {supervisores.map((s) => (
+              {supervisoresFiltrados.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.alias}
                 </option>
